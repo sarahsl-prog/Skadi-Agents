@@ -46,6 +46,17 @@ V1.5 adds a **Blocker** (containment recommendations) and a **Post-Hunt Analyst*
 
 Pre-implementation. The architecture and delivery plan are drafted; the codebase has not been scaffolded yet. See the project plan for phasing.
 
+## Development
+
+Pre-commit hooks run on every commit (file hygiene, secret scanning via gitleaks, Python lint/format via Ruff). Install them once with:
+
+```sh
+pip install pre-commit
+pre-commit install
+```
+
+Run against the whole tree any time with `pre-commit run --all-files`.
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
