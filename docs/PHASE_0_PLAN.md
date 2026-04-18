@@ -138,7 +138,7 @@ Rough day-by-day cut — parallelizable where noted.
   - `postgres` → `pgvector/pgvector:pg16`; mount `infra/postgres/init.sql`; healthcheck `pg_isready`.
   - `nats` → `nats:2.10-alpine` with `-js -c /etc/nats/nats-server.conf`.
   - `otel-collector` → `otel/opentelemetry-collector-contrib:latest`; config mounted from `infra/otel/`.
-  - `mlflow` → custom image from `infra/mlflow/Dockerfile` (tracking server + artifact store on local volume).
+  - `mlflow` → custom image from `infra/mlflow/Dockerfile` (tracking server + artifact store on local volume). Tagged with compose profile `full`; omitted by the default `minimal` profile used in CI.
   - `ollama` → `ollama/ollama:latest`; entrypoint pulls `llama3.2:1b` for CI-friendly smoke tests (swap to 70B per deployment).
 - [ ] `docker-compose.override.yml.example` for GPU passthrough, custom model mounts.
 - [ ] `infra/postgres/init.sql`: `CREATE EXTENSION IF NOT EXISTS vector;` plus a `wolfpack` role.
@@ -165,7 +165,8 @@ Rough day-by-day cut — parallelizable where noted.
 ### Day 6 — CI hardening
 
 - [ ] `.github/workflows/ci.yml`:
-  - Jobs: `lint` (already covered by pre-commit), `typecheck` (mypy), `test-unit` (pytest), `test-integration` (testcontainers; allowed to be slower + cached), `build` (`docker compose build --dry-run` or equivalent).
+  - Jobs: `lint` (already covered by pre-commit), `typecheck` (mypy), `test-unit` (pytest), `test-integration` (testcontainers; allowed to be slower + cached), `build` (`docker compose --profile minimal build`).
+  - Integration tests use the `minimal` compose profile (no MLflow) per the Phase 0 decision.
   - Python matrix pinned to 3.11 (no matrix yet; keep it simple).
   - Use `astral-sh/setup-uv@v3` for fast dep install.
 - [ ] Branch protection for `main` after PR #1 merges (not a code change — record as a follow-up checklist item for the owner).
@@ -279,8 +280,8 @@ Before Phase 1 starts:
 - [ ] Issue filed with the four Phase-1 workstreams (schemas, Postgres migrations, hash-chain, crypto-shredding skeleton) referencing this doc's §5.
 - [ ] The five remaining operational items from `PROJECT_PLAN.md` §7 are either resolved or explicitly deferred-past-Phase-1 (KMS choice is the only one that actually blocks Phase 1; the rest can slip to Phase 3+).
 
-## 9. Open Questions Specific to Phase 0
+## 9. Phase 0 Decisions (resolved)
 
-- **MLflow vs. pure OTel collector in CI.** For Phase 0's smoke test, is MLflow required, or is showing the trace in the collector's `debug` exporter sufficient? MLflow adds a container and ~200 MB to the dev stack. Recommend: make MLflow optional-but-default; CI runs with collector-only for speed.
-- **Ollama model for CI.** `llama3.2:1b` is my proposal for CI/dev smoke (fits on a laptop, takes < 1 GB). Confirm or swap.
-- **pyproject.toml vs. Poetry-style layout.** uv supports both; the modern PEP 621 `[project]` table is my default. Confirm.
+- **MLflow in CI: optional.** CI runs with the OTel Collector's `debug` exporter only — saves ~200 MB of container weight and several seconds per run. Local `just up` still brings MLflow by default; CI uses a compose profile (`--profile minimal`) that omits it.
+- **Ollama model for CI/dev smoke: `llama3.2:1b`.** Fits on a laptop CPU, < 1 GB. Production deployments swap to Llama 3.3 70B Instruct per `infra/sizing.md`.
+- **Project layout: `pyproject.toml` with PEP 621 `[project]` table** (uv-managed). No Poetry-style `[tool.poetry]` block.
