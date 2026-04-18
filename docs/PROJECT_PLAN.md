@@ -9,21 +9,28 @@ These answers from the project owner now anchor the plan:
 | # | Topic | Decision |
 |---|---|---|
 | 1 | Event bus | **NATS** (JetStream) |
-| 2 | LLM provider | **Ollama by default, pluggable** for other providers |
+| 2 | LLM provider | **Ollama by default**; pluggable across **local Ollama**, **Ollama Cloud** (dev only), **vLLM**, and **LM Studio** |
+| 2a | Default model | **Llama 3.3 70B Instruct** at **FP8/BF16** reference precision (Q4_K_M published alongside as a "lightweight reference") |
+| 2b | Hardware target | **Enterprise profile (a)** — ≥1× H100/H200 (80GB) or 2× L40S. Reference deployment assumes this class of GPU. |
 | 3 | Tenancy | **Single-tenant, on-prem** |
 | 4 | Telemetry adapters | **Tier 1:** Syslog (generic), Windows Event Logs, CrowdStrike Falcon, Okta, generic firewall logs. **Tier 2:** Zeek/Suricata, DNS logs, Cloudflare/generic proxy, AWS CloudTrail |
+| 4a | Tier-2 priority (on-prem bias) | **DNS → Zeek/Suricata → Cloudflare/proxy → AWS CloudTrail** |
 | 5 | Action authority | **Read-only** in V1 |
 | 6 | Ledger immutability | **Hash-chained entries** |
 | 7 | Case-state concurrency | **Per-branch sub-state** |
 | 8 | Analyst approval | **Per-case, any analyst** |
-| 11 | Retention / erasure | **User-configurable retention, default 1yr; crypto-shredding keys** for erasure (open to discussion) |
-| 12 | Analyst-review SLA | **Timeout / auto-escalation** path |
+| 9 | PII redaction | **Deterministic pseudonymization** of identifiers with a **per-case salt**; NER-based stripping of free-text fields before context assembly; **audit-logged "show raw" break-glass** for analysts |
+| 10 | Confidence semantics | **Ordinal 1–5 with written anchors** (`1` coincidence, `2` weak, `3` plausible, `4` strong, `5` high-fidelity); routing rule: "if Tracker confidence < 3, re-run Flanker" |
+| 11 | Retention / erasure | **User-configurable retention, default 1yr**; erasure via **crypto-shredding** — per-case DEK wrapped by per-deployment KEK in local KMS |
+| 12 | Analyst-review SLA | **24-hour default timeout**; on expiry, **auto-escalate** with case-outcome tag `analyst_timeout_escalation` + configurable webhook (ticketing/pager) |
 | 13 | `CaseState` source of truth | **Pydantic models in `schemas/`, derive LangGraph TypedDict from them** |
 | 14 | Scribe | **Non-LLM in V1**, designed to accept an LLM later |
 | 15 | Observability backend | **MLflow primary**, design to slot Jaeger in later |
-| 16 | Knowledge store | **Haystack** (backend choice still open — see §7) |
+| 16 | Knowledge store | **Haystack over pgvector** (reuses the Postgres already in stack) |
+| 17 | Alpha Dispatcher | **LLM-backed** (for flexibility across varying seed formats), same default model as the pack |
+| 18 | Deployment mode flag | `dev` \| `on_prem_connected` \| `on_prem_airgapped` — hosted backends (Ollama Cloud, any API) are hard-failed at config load in `on_prem_airgapped` |
 
-Still open: **(9) PII handling / redaction**, **(10) confidence semantics & calibration** — both TBD.
+All items open at the previous draft are now resolved. Remaining discussion items are operational details (see §7).
 
 ## 1. System Purpose
 
@@ -82,43 +89,64 @@ Nothing enters "institutional memory" without explicit analyst approval — lear
 Proposed phasing, each phase ends in a demoable slice.
 
 ### Phase 0 — Repo & environment bootstrap (≈1 week)
-- Monorepo layout: `orchestrator/` (LangGraph), `agents/` (Pydantic AI), `rag/` (Haystack), `schemas/` (shared Pydantic models), `adapters/` (telemetry integrations), `infra/`, `tests/`.
-- Python toolchain (uv/poetry), pre-commit (ruff, mypy, pytest), devcontainer, docker-compose stack: Postgres + **NATS JetStream** + OTel Collector + **MLflow** + **Ollama**.
-- LLM provider abstraction: a small `LLMClient` interface with an `OllamaClient` default and a pluggable registry for OpenAI / Anthropic / Bedrock / local-vLLM implementations (driven by config, no code changes to swap).
+- Monorepo layout: `orchestrator/` (LangGraph), `agents/` (Pydantic AI), `rag/` (Haystack), `schemas/` (shared Pydantic models), `adapters/` (telemetry integrations), `llm/` (LLM client abstraction), `infra/`, `tests/`.
+- Python toolchain (uv/poetry), pre-commit (ruff, mypy, pytest), devcontainer, docker-compose stack: Postgres (with **pgvector** extension) + **NATS JetStream** + OTel Collector + **MLflow** + **Ollama** (with **Llama 3.3 70B Instruct** pulled).
+- **LLM provider abstraction** (`llm/`): two concrete clients built on Pydantic AI's `Model` abstraction —
+  - `OllamaClient` — native Ollama API; same class handles local Ollama and Ollama Cloud, differentiated by `base_url` + `api_key`.
+  - `OpenAICompatibleClient` — one class for vLLM, LM Studio, and any other OpenAI-compatible server.
+- **Deployment-mode gating.** `config.deployment_mode ∈ {dev, on_prem_connected, on_prem_airgapped}`. Hosted endpoints (Ollama Cloud, any external API) are validated at config load and hard-fail in `on_prem_airgapped`.
+- GPU sizing guide in `infra/`: reference = 1× H100/H200 80GB (FP8/BF16 Llama 3.3 70B); fallback profile = Q4_K_M on 2× 48GB cards documented as "lightweight".
 - CI: lint, typecheck, unit tests, container build. Single-tenant deployment target (no multi-tenant plumbing).
 
 ### Phase 1 — Contracts & case state (≈1–2 weeks)
-- Shared Pydantic models in `schemas/`: `Seed`, `Entity`, `Hypothesis`, `EvidenceRef`, `CaseState`, `BranchState`, `BranchSpec`, per-agent `Input`/`Output`. **LangGraph `TypedDict`s are derived from these Pydantic models** (single source of truth — no hand-maintained duplication).
-- Postgres schema for `cases`, `branches`, `hypotheses`, `pivots`, `evidence_ledger`, `learning_queue`, `retention_policy`, `crypto_shred_keys`.
+- Shared Pydantic models in `schemas/`: `Seed`, `Entity`, `Hypothesis`, `EvidenceRef`, `CaseState`, `BranchState`, `BranchSpec`, `Confidence` (ordinal 1–5 enum with docstring anchors), per-agent `Input`/`Output`. **LangGraph `TypedDict`s are derived from these Pydantic models** (single source of truth — no hand-maintained duplication).
+- Postgres schema for `cases`, `branches`, `hypotheses`, `pivots`, `evidence_ledger`, `learning_queue`, `retention_policy`, `crypto_shred_keys`, `pii_salts`, `breakglass_audit`.
 - **Per-branch sub-state**: each branch carries its own `BranchState` row; `CaseState` is an aggregate view. Optimistic versioning (`version` column + CAS updates) to prevent Flanker/Tracker write conflicts during parallel work.
 - **Hash-chained evidence ledger**: each row stores `prev_hash` + `content_hash`; computed via a Postgres trigger on insert; a `verify_chain(case_id)` SQL function and a replay tool validate integrity.
-- **Retention & crypto-shredding**: each case row references a per-case or per-tenant encryption key stored in `crypto_shred_keys`; erasure deletes the key while tombstoning the rows. Default retention = 1 year, overridable per deployment.
+- **Crypto-shredding architecture**:
+  - **Per-case DEK** (data encryption key) generated at case creation, stored wrapped in `crypto_shred_keys`.
+  - **Per-deployment KEK** (key encryption key) sits in a local KMS abstraction — Vault/PKCS#11/software-KMS depending on what the customer runs.
+  - Erasure request → delete the DEK row; ledger rows remain (hash chain intact) but decrypt to nothing.
+  - Key-rotation policy: KEK rotated annually by default, DEKs not rotated (case-bound).
+- **PII pseudonymization store**: `pii_salts` holds per-case salts used to hash identifiers; NER pipeline (Phase 3) uses them to produce deterministic tokens. `breakglass_audit` records every "show raw" action.
 - Baseline governance fixtures: `retention_policy` seeded with the 1-year default.
 
 ### Phase 2 — Orchestration skeleton (≈1–2 weeks)
 - LangGraph graph with `alpha_dispatcher`, `tracker`, `flanker`, `closer`, `scribe`, `review` nodes using mock (deterministic) agent stubs.
 - **NATS JetStream** subjects: `hunt.task.*`, `hunt.finding.*`, `hunt.branch.*`, `hunt.status.*`; durable consumers per agent with ack/redeliver semantics.
-- `review` node supports **timeout → auto-escalate** (configurable deadline; on expiry, LangGraph transitions the case to an escalated outcome and records the timeout on the ledger).
+- `review` node supports **24-hour default timeout → auto-escalate**: on expiry, LangGraph transitions the case to outcome `analyst_timeout_escalation`, records the event on the ledger, and fires the configured webhook (ticketing system, pager, etc.).
 - Scribe implemented as a **non-LLM service** behind a `ScribeInterface` (drop-in point for a future LLM-backed narrative scribe).
+- Alpha Dispatcher wired to its own Pydantic AI agent instance so seed-format variability doesn't require code changes.
 - Happy-path integration test: seed → closed case, full hash-chained ledger present, trace visible in MLflow. Chaos test: kill NATS mid-case, confirm replay from ledger.
 
 ### Phase 3 — Tracker + RAG + Tier-1 adapters (≈2–3 weeks)
-- Haystack pipelines for threat intel (ATT&CK, CVE, IOC feeds) and case history; expose as Pydantic AI tools.
+- **Haystack pipelines over pgvector**: threat-intel pipeline (ATT&CK, CVE, IOC feeds) and case-history pipeline, exposed as Pydantic AI tools.
 - **Tier-1 telemetry adapters** (must ship with V1): generic **Syslog**, **Windows Event Logs**, **CrowdStrike Falcon**, **Okta**, **generic firewall logs**. Each adapter implements a common `TelemetrySource` interface (`query(entity, time_window, filters) -> Events`) so agents remain adapter-agnostic.
-- Tracker agent implemented with Ollama as the default LLM (pluggable), wired to the Tier-1 adapters and the Haystack intel tool.
-- Evaluation harness: golden-set hunts with known outcomes; MLflow-tracked metrics (precision of initial hypothesis, calibration of `tracker_confidence`).
+- **PII pre-processing layer** sits between adapters and agent context:
+  - Deterministic pseudonymization (per-case salt → `user_a42`, `host_b17`, etc.) for identifiers.
+  - NER-based stripping of free-text fields (email bodies, chat messages, URL paths) before they reach the model.
+  - "Show raw" break-glass endpoint available only from the Analyst Console, writes to `breakglass_audit`.
+- Tracker agent uses **Llama 3.3 70B Instruct** via Ollama (pluggable), wired to the Tier-1 adapters and the Haystack intel tool.
+- **Confidence ordinal 1–5**: Tracker returns `Confidence` enum values; written anchors ship alongside the Pydantic schema for reviewer calibration.
+- Evaluation harness: golden-set hunts with known outcomes; MLflow-tracked metrics (precision of initial hypothesis, distribution of `tracker_confidence` buckets, analyst-agreement on the anchor scale).
 
 ### Phase 4 — Flanker + branching + Tier-2 adapters (≈2–3 weeks)
-- Flanker agent with lateral-pivot tools spanning the Tier-1 adapters plus **Tier-2 adapters**: **Zeek/Suricata**, **DNS logs**, **Cloudflare / generic proxy**, **AWS CloudTrail**.
+- Flanker agent with lateral-pivot tools spanning the Tier-1 adapters plus **Tier-2 adapters**, rolled out in on-prem-biased priority order:
+  1. **DNS logs** — highest-leverage pivot source (C2 beacons, newly-registered domains, DGA).
+  2. **Zeek/Suricata** — rich network-level signal for on-prem customers.
+  3. **Cloudflare / generic proxy**.
+  4. **AWS CloudTrail** — last, since on-prem-heavy customers use it less.
 - LangGraph branch creation writes new `BranchState` rows; routing and concurrency use the per-branch sub-state model from Phase 1.
 - Branch-explosion controls: max-depth, max-branches per case, dedup on hypothesis similarity hashes, token/tool budget per branch.
-- Tier-2 adapter rollout order can be parallelized across the phase; each lands behind a feature flag so a deployment can ship with just a subset enabled.
+- Flanker re-check loop: if Tracker's `Confidence < 3`, route back to Flanker for additional pivots before Closer runs.
+- Each Tier-2 adapter lands behind a feature flag so a deployment can ship with just a subset enabled.
 
 ### Phase 5 — Closer + Analyst Review UI (≈2–3 weeks)
-- Closer agent emitting verdict packets.
+- Closer agent emitting verdict packets (decision, `Confidence` ordinal, next-best action, evidence refs).
 - Minimal Analyst Console (web UI) for queue, case view with timeline, verdict review, **per-case learning-approval toggle (any analyst can approve)**, and case-outcome choice.
+- **Break-glass "show raw" control** in the case view: rehydrates pseudonymized identifiers and raw free-text fields for the current analyst session; every invocation writes to `breakglass_audit`.
 - Policy guardrails displayed alongside the verdict.
-- Review timeout configurable per deployment; the UI shows remaining time and the auto-escalation target.
+- Review timeout defaults to **24 hours**, configurable per deployment; the UI shows remaining time and the auto-escalation target/webhook.
 
 ### Phase 6 — Observability hardening (≈1 week)
 - OTel across all three services, consistent `case_id` / `branch_id` / `agent_run_id` span attributes propagated as OTel baggage.
@@ -132,8 +160,10 @@ Proposed phasing, each phase ends in a demoable slice.
 
 ### Phase 8 — V1 release readiness
 - Threat-model review, secret-handling audit, red-team prompt-injection tests on RAG and tool inputs, runbook, on-call docs.
+- Crypto-shredding dry-run: erase a test case, verify ledger hash chain remains intact and rows decrypt to null.
+- Break-glass audit review: confirm every invocation is captured in `breakglass_audit` and surfaced on the case timeline.
 
-V1.5 agents (Blocker, Post-Hunt Analyst) are staged after V1 hardens.
+V1.5 agents (Blocker, Post-Hunt Analyst) are staged after V1 hardens. **Specialist reasoning model for Closer** (DeepSeek-R1 or R1-Distill 70B) is a V1.1 pilot, gated on golden-set verdict-quality data from V1.
 
 ## 6. Cross-cutting Workstreams
 
@@ -144,19 +174,12 @@ V1.5 agents (Blocker, Post-Hunt Analyst) are staged after V1 hardens.
 
 ## 7. Outstanding Design Questions / Clarifications
 
-Most items from the first draft are now resolved in §0. The ones still open:
+All blocking design questions from earlier drafts are resolved in §0. The remaining items are operational details that can be closed during the phase in which they land:
 
-### Still TBD
-- **(9) PII / data-handling.** SOC telemetry contains user identifiers, URLs, file paths, and sometimes email bodies. Even with Ollama on-prem (no external egress), we still need a policy for what reaches the model context window — redaction rules, entity-type allowlists, and whether analysts can opt-in richer context per case. Default stance for V1 needs to be decided before Phase 3.
-  - *Proposed default until decided:* deterministic redaction of free-text fields (emails, bodies) into hashed tokens that agents can correlate but not read, with a break-glass "show raw" toggle that's audit-logged on the ledger.
-- **(10) Confidence semantics & calibration.** `tracker_confidence` and Closer's `confidence` field need a shared definition and a rubric. Proposals: (a) a calibrated probability with a golden-set evaluation harness, or (b) an ordinal 1–5 scale with written anchors. Decision needed before Phase 3 so the routing rule "if confidence < X, re-run Flanker" is meaningful.
-- **Knowledge-store backend.** Haystack is confirmed, but Haystack sits in front of OpenSearch / Elasticsearch / Weaviate / Qdrant / pgvector. Given the on-prem single-tenant constraint, **pgvector** is the simplest choice (reuses the Postgres already in stack); **OpenSearch** is the richer option if full-text + vector hybrid matters. Recommend pgvector for V1 unless hybrid ranking is critical.
-
-### Newly surfaced by the answers
-- **Crypto-shredding key management.** Per-case, per-tenant, or hierarchical? HSM-backed or software KMS? Key rotation cadence? This needs a design review before Phase 1 ships — the ledger's integrity story depends on it.
-- **Ollama model defaults.** Which Ollama model is the V1 default (e.g., Llama 3.1 70B, Qwen 2.5, Mistral)? Affects GPU sizing for the on-prem deployment and the eval baseline.
-- **Review-timeout policy.** What is the default timeout duration, and what does "auto-escalate" route to — a separate ticketing system, an on-call pager, or just a case-outcome tag? Minimal V1 default should still be explicit.
-- **Tier-2 adapter priority order.** Zeek/Suricata, DNS, Cloudflare/proxy, CloudTrail all land in Phase 4 — which is highest priority if the phase slips?
+- **KMS implementation choice.** Phase 1 needs a concrete KMS behind the KEK abstraction. HashiCorp Vault is the safe default for most enterprise customers; cloud KMS (AWS/GCP/Azure) is an alternative for cloud-adjacent deployments; a PKCS#11 HSM is the high-assurance option. A software-only fallback exists for dev. Which concrete KMS ships as the reference (vs. pluggable) is decidable during Phase 1 architecture review.
+- **NER model for PII stripping.** Phase 3 needs a concrete choice (spaCy, Presidio, a small LLM). Presidio is the most security-appropriate since it ships pattern libraries for IPs/emails/credit cards; spaCy is lighter but less domain-tuned. Decidable during Phase 3.
+- **Analyst Console stack.** Phase 5 needs a front-end choice (React + FastAPI, SvelteKit, or server-rendered). Not blocking earlier work; decidable at Phase 5 kickoff.
+- **V1.5 trigger metrics.** Concrete thresholds for analyst-hours saved, false-positive rate, and branch-elevation precision that gate Blocker and Post-Hunt Analyst work. Best defined after the Phase 6 eval dashboards are live with real data.
 
 ## 8. Recommendations
 
@@ -187,14 +210,6 @@ Most items from the first draft are now resolved in §0. The ones still open:
 - **Replay-first demos.** Ship a "replay a prior case" feature early — it's the most persuasive artifact for showing the audit trail and it doubles as a test harness.
 - **Decide V1.5 triggers now.** Define the metrics (analyst-hours saved, false-positive rate, branch-elevation precision) that gate Blocker and Post-Hunt Analyst work, so scope creep is explicit.
 
-## 9. Immediate Asks
+## 9. Status
 
-With the answers in §0 captured, the remaining blockers for me are:
-
-1. **PII redaction default (§7-9)** — needed before Phase 3 so the Tracker agent doesn't leak raw identifiers into context.
-2. **Confidence rubric (§7-10)** — needed before Phase 3 so we can evaluate Tracker and route on Flanker's re-check loop meaningfully.
-3. **Haystack backend choice** — needed before Phase 3. Recommend **pgvector** for V1 simplicity given on-prem single-tenant; please confirm or counter.
-4. **Crypto-shredding key-management design** — needed before Phase 1 lands the ledger.
-5. **Default Ollama model** — needed for infra sizing and the eval baseline.
-
-Everything else in §7 can be resolved during the relevant phase without blocking earlier work.
+All blocking design questions are resolved. The plan is ready to move into Phase 0 execution. Remaining items in §7 are phase-scoped operational details that do not block earlier work.
