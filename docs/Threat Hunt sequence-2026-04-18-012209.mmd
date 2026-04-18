@@ -1,0 +1,86 @@
+sequenceDiagram
+    autonumber
+
+    participant Seed as Seed Input
+    participant Telemetry as Telemetry Sources
+    participant Intel as Threat Intel
+    participant Alpha as Alpha Dispatcher
+    participant Bus as Event Bus
+    participant Policy as Policy Guardrails
+    participant Tracker as Tracker Agent
+    participant Flanker as Flanker Agent
+    participant Closer as Closer Agent
+    participant Scribe as Scribe Agent
+    participant CaseMem as Shared Case Memory
+    participant Ledger as Evidence Ledger
+    participant LearnQ as Learning Queue
+    participant Analyst as Analyst Review
+
+    Seed->>Alpha: Open hunt from IOC / alert / anomaly
+    Alpha->>Bus: Publish initial hunt task
+    Alpha->>CaseMem: Create case record
+    Alpha->>Ledger: Start immutable timeline
+
+    Bus->>Tracker: Assign initial scent task
+    activate Tracker
+    Tracker->>Telemetry: Query primary signals
+    Telemetry-->>Tracker: Alert context / raw events
+    Tracker->>Intel: Enrich IOC / TTP context
+    Intel-->>Tracker: Matches / confidence hints
+    Tracker->>CaseMem: Store initial hypothesis
+    Tracker->>Ledger: Log evidence + first scent
+    Tracker->>Bus: Publish findings
+    deactivate Tracker
+
+    Bus->>Flanker: Assign lateral pivot task
+    activate Flanker
+    Flanker->>Telemetry: Pivot across related hosts / users / DNS / email
+    Telemetry-->>Flanker: Adjacent entities + behaviors
+    Flanker->>CaseMem: Store related pivots
+    Flanker->>Ledger: Log pivot evidence
+
+    alt Flanker finds a meaningful side signal
+        Flanker->>CaseMem: Create fresh branch hypothesis
+        Flanker->>Bus: Publish branch update for dispatcher
+        Bus->>Alpha: Notify branch elevation
+        Alpha->>Bus: Dispatch follow-up branch tasks
+    else No meaningful branch
+        Flanker->>Bus: Publish lateral findings only
+    end
+    deactivate Flanker
+
+    Bus->>Closer: Assemble decision packet
+    activate Closer
+    Closer->>CaseMem: Read case state + branch context
+    Closer->>Intel: Pull final threat context if needed
+    Intel-->>Closer: Supporting intel
+    Closer->>Ledger: Log verdict rationale
+    Closer->>Analyst: Submit verdict + next-best action
+    deactivate Closer
+
+    par Continuous logging
+        Tracker->>Scribe: Forward hunt events
+        Flanker->>Scribe: Forward pivot events
+        Closer->>Scribe: Forward verdict events
+        Scribe->>Ledger: Append immutable log entries
+        Scribe->>CaseMem: Update factual case timeline only
+    and Policy check
+        Policy-->>Analyst: Show approval boundaries
+    end
+
+    alt Analyst approves learning update
+        Analyst->>LearnQ: Approve lessons / dead ends / reusable playbook notes
+        LearnQ->>CaseMem: Store approved learning only
+    else Analyst denies learning update
+        Analyst-->>CaseMem: No memory update
+    end
+
+    alt Continue hunt
+        Analyst->>Alpha: Continue hunt with new tasks
+        Alpha->>Bus: Dispatch next round
+    else Escalate / close
+        Analyst->>Ledger: Record final case outcome
+    end
+
+    Note over Alpha,Bus: Alpha is a dispatcher with light arbitration, not a heavy supervisor.
+    Note over Scribe,Ledger: Scribe logs facts only&#59; post-hunt analysis stays out of V1.

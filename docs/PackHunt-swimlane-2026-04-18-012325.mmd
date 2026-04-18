@@ -1,0 +1,131 @@
+flowchart LR
+
+    %% ========= LANE: INPUTS =========
+    subgraph Inputs["Inputs & Source Systems"]
+        direction TB
+        A[Seed Input<br/>IOC / Alert / Hunt Query / Anomaly]
+        L[Telemetry Sources<br/>SIEM / EDR / IAM / DNS / Email / Cloud Logs]
+        M[Threat Intel + Knowledge<br/>ATT&CK / CVEs / IOC feeds / Asset Context]
+    end
+
+    %% ========= LANE: CONTROL =========
+    subgraph Control["Control Plane"]
+        direction TB
+        B[Alpha Dispatcher<br/>Task routing + light arbitration]
+        D[Event Bus<br/>Tasks / findings / branch updates / status]
+        E[Policy Guardrails<br/>Approval rules / execution boundaries]
+    end
+
+    %% ========= LANE: HUNT PACK =========
+    subgraph Pack["Hunt Pack V1"]
+        direction TB
+        G[Tracker Agent<br/>Find initial credible scent]
+        H[Flanker Agent<br/>Expand sideways + elevate fresh branch]
+        J[Closer Agent<br/>Assemble verdict + next-best action]
+        K[Scribe Agent<br/>Logging only]
+    end
+
+    %% ========= LANE: MEMORY =========
+    subgraph Memory["Memory & Evidence"]
+        direction TB
+        C[Shared Case Memory<br/>Case state / hypotheses / pivots / confidence]
+        F[Evidence Ledger<br/>Immutable timeline / replay trail]
+        R[Learning Queue<br/>Approved dead ends / similar cases / playbook updates]
+        S[No Memory Update]
+    end
+
+    %% ========= LANE: REVIEW =========
+    subgraph Review["Analyst Review"]
+        direction TB
+        N[Analyst Review]
+        O{Approve learning update?}
+        T{Case outcome}
+        U[Escalation / Ticket / Case handoff]
+        V[Close benign]
+        W[Continue hunt<br/>New tasks back to dispatcher]
+    end
+
+    %% ========= LANE: FUTURE =========
+    subgraph Future["V1.5 Extensions"]
+        direction TB
+        X[Blocker Agent - V1.5<br/>Predict escape paths + recommend containment]
+        Y[Post-Hunt Analyst Agent - V1.5<br/>Generate summaries / ATT&CK mapping / lessons learned]
+        Z[Post-Hunt Report / ATT&CK Map / Lessons Learned]
+    end
+
+    %% ========= MAIN FLOW =========
+    A --> B
+    B --> D
+    B --> C
+    B --> F
+
+    D --> G
+    G --> L
+    G --> M
+    G --> C
+    G --> F
+    G --> D
+
+    D --> H
+    H --> L
+    H --> M
+    H --> C
+    H --> F
+    H --> D
+
+    D --> J
+    J --> C
+    J --> M
+    J --> F
+    J --> N
+
+    G --> K
+    H --> K
+    J --> K
+    K --> F
+    K --> C
+
+    E --> N
+    N --> O
+    O -- Yes --> R
+    O -- No --> S
+    R --> C
+
+    N --> T
+    T -- Escalate --> U
+    T -- Benign --> V
+    T -- Continue hunt --> W
+    W --> B
+
+    %% ========= FUTURE LINKS =========
+    D -. future tasking .-> X
+    X -. future findings .-> D
+    X -. future evidence .-> F
+
+    N -. analyst-approved post-hunt analysis .-> Y
+    C -. case context .-> Y
+    F -. evidence source .-> Y
+    Y -. summary artifacts .-> Z
+
+    %% ========= NODE STYLES =========
+    classDef input fill:#E8F1FB,stroke:#2F6B9A,color:#0F2740,stroke-width:2px;
+    classDef control fill:#EDE9FE,stroke:#6D28D9,color:#2B145A,stroke-width:2px;
+    classDef agent fill:#FFF7ED,stroke:#C2410C,color:#431407,stroke-width:2px;
+    classDef memory fill:#ECFDF5,stroke:#0F766E,color:#073B3A,stroke-width:2px;
+    classDef review fill:#FEF3C7,stroke:#B45309,color:#4A2C00,stroke-width:2px;
+    classDef future fill:#FCE7F3,stroke:#BE185D,color:#500724,stroke-width:2px,stroke-dasharray: 6 4;
+
+    class A,L,M input;
+    class B,D,E control;
+    class G,H,J,K agent;
+    class C,F,R,S memory;
+    class N,O,T,U,V,W review;
+    class X,Y,Z future;
+
+    %% ========= SUBGRAPH / LANE STYLES =========
+    style Inputs fill:#F8FBFF,stroke:#2F6B9A,stroke-width:2px,color:#0F2740
+    style Control fill:#FAF7FF,stroke:#6D28D9,stroke-width:2px,color:#2B145A
+    style Pack fill:#FFF9F2,stroke:#C2410C,stroke-width:2px,color:#431407
+    style Memory fill:#F4FFFA,stroke:#0F766E,stroke-width:2px,color:#073B3A
+    style Review fill:#FFF9E8,stroke:#B45309,stroke-width:2px,color:#4A2C00
+    style Future fill:#FFF6FB,stroke:#BE185D,stroke-width:2px,stroke-dasharray: 6 4,color:#500724

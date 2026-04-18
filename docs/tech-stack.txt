@@ -1,0 +1,275 @@
+
+
+A good hybrid here is:
+
+LangGraph as the orchestrator + state machine for the pack‑hunt workflow.
+
+Pydantic AI as the implementation layer for each agent (Tracker, Flanker, Closer, Scribe).
+
+Haystack as the RAG/context backend for threat intel and case history.
+
+That pattern (graph orchestrator + type‑safe agents + dedicated RAG) is already emerging in practice: people are combining LangGraph for graphs, Pydantic AI for strict schemas, and Haystack for retrieval pipelines, because each solves a different layer cleanly.
+
+
+
+Below is what that looks like for your pack‑hunt SOC.
+
+High-level role split
+LangGraph:
+
+Owns case state graph (New → Scented → Shadowing → Decision → Review → Closed/Continue).
+
+Encodes nodes for Alpha, Tracker, Flanker, Closer, Scribe, and transitions between them.
+
+Handles branching when Flanker elevates side signals into new hypotheses.
+
+Bridges your event bus and external services.
+
+
+Pydantic AI:
+
+Implements each agent node as a type‑safe Pydantic AI “agent function” with:
+
+Typed inputs (case slice, entities, telemetry queries).
+
+Typed outputs (hypotheses, pivots, verdicts, log entries).
+
+Enforces valid schema and retries when the LLM goes off‑schema.
+
+Adds durable execution, validation, and observability for each agent run.
+
+
+Haystack:
+
+Provides retrieval pipelines for:
+
+Threat intel (CVE feeds, advisories, blogs).
+
+Historic cases, hunts, and internal knowledge.
+
+Exposes those pipelines as tools (via Python functions or MCP-like endpoints) that your agents call.
+
+Keeps retrieval and ranking logic explicit and debuggable.
+
+
+Conceptual diagram (textual)
+
+Think of it as three concentric rings:
+
+***Orchestration ring (LangGraph)
+
+Nodes: alpha_dispatcher, tracker, flanker, closer, scribe.
+
+State: case graph (branches, confidence, status).
+
+Edges: event-driven transitions and conditional routes (e.g., “if confidence < X, route back to Flanker”).
+
+
+***Agent ring (Pydantic AI)
+
+Inside each LangGraph node, you call a Pydantic AI agent with strict types for input/output.
+
+Pydantic AI handles model calls, tools, retries, and schema enforcement.
+
+
+***Context ring (Haystack)
+
+Pydantic AI agents call Haystack pipelines as tools to retrieve context.
+
+Haystack runs retrievers/rankers over CVEs, intel, and case history, returning structured results.
+
+
+How a hunt flows in this hybrid
+
+1. Alpha / LangGraph opens the case
+A new seed (IOC/alert/anomaly) arrives via your event bus.
+
+LangGraph’s state graph has an entry node like alpha_dispatcher which:
+
+Normalizes the seed.
+
+Creates the initial CaseState object (case ID, entities, branch list, etc.).
+
+Sets state to New and edges to tracker next.
+
+CaseState could be a TypedDict or dataclass used by LangGraph and mirrored as a Pydantic model for Pydantic AI.
+
+2. Tracker is a LangGraph node, implemented with Pydantic AI
+LangGraph calls the tracker node, which internally calls a Pydantic AI agent:
+
+python
+# pseudo-code sketch, not full implementation
+
+class TrackerInput(BaseModel):
+    case_id: str
+    seed: Seed
+    entities: list[Entity]
+    context_summary: str | None
+
+class TrackerOutput(BaseModel):
+    new_hypotheses: list[Hypothesis]
+    updated_entities: list[Entity]
+    evidence_refs: list[EvidenceRef]
+    tracker_confidence: float
+
+tracker_agent = Agent[TrackerInput, TrackerOutput](...)
+Pydantic AI:
+
+Validates input.
+
+Uses tools (SIEM/EDR/identity adapters, plus a Haystack threat-intel pipeline tool) to enrich the IOC.
+
+Forces the LLM to return a valid TrackerOutput (or retry until it does).
+
+LangGraph receives a guaranteed-structure TrackerOutput and:
+
+Updates CaseState with new hypotheses, entities, and evidence references.
+
+Transitions state to Scented and routes to flanker.
+
+3. Flanker node, also implemented with Pydantic AI, calls Haystack
+LangGraph calls flanker, which again uses a Pydantic AI agent with typed FlankerInput / FlankerOutput.
+
+Tools:
+
+Endpoint/identity/DNS adapters.
+
+Haystack pipeline that can search internal case history and threat intel for related entities and TTP patterns.
+
+If Flanker sees a strong side signal, it:
+
+Returns branches_to_create: list[BranchSpec].
+
+LangGraph:
+
+Creates new CaseState branches.
+
+Adds edges from flanker to tracker or flanker again for those branches, depending on logic.
+
+4. Closer node compiles a verdict
+LangGraph calls closer, implemented as Agent[CloserInput, CloserOutput] in Pydantic AI.
+
+Closer uses:
+
+Current CaseState.
+
+Evidence from Postgres / ledger.
+
+Haystack to query prior similar cases and external intel.
+
+It returns a typed verdict object with:
+
+Decision (continue / benign / escalate).
+
+Confidence.
+
+Recommended next actions.
+
+Evidence references linked to prior outputs.
+
+LangGraph writes that into state and raises an “analyst review requested” event for the UI.
+
+5. Scribe is a thin logging node
+Scribe can be:
+
+Another Pydantic AI agent that just transforms structured events into ledger entries, or
+
+A simple non-LLM service that writes logs based on the typed outputs from Tracker/Flanker/Closer.
+
+The key: Scribe’s schema is strictly typed, so your ledger is always structurally consistent.
+
+6. Analyst review and learning
+Analyst interacts via your UI, which writes a decision into Postgres.
+
+LangGraph has a review node that:
+
+Awaits analyst input.
+
+Routes back to tracker/flanker for “continue” or to end-state for “benign/escalate”.
+
+A simple worker reads approved learning events and:
+
+Writes into approved_learning tables.
+
+Optionally triggers Haystack ingestion so future retrieval includes these lessons.
+
+You keep learning opt‑in as you wanted: nothing gets into “institutional memory” until a human approves it.
+
+
+
+Where each framework sits in your stack
+
+
+LangGraph
+Layer: Orchestration / state machine / multi-agent graph.
+
+Responsibilities:
+
+Define CaseState and all nodes (alpha, tracker, flanker, closer, scribe, review).
+
+Encode transitions (conditional edges, branching, loops).
+
+Integrate with your event bus (NATS/Redis/Kafka) to emit/consume events at state boundaries.
+
+Provide an explicit, replayable state graph for each hunt.
+
+
+Pydantic AI
+Layer: Agent implementation / validation / durable execution.
+
+Responsibilities:
+
+Implement each pack role as an Agent[InputModel, OutputModel].
+
+Provide strict type-checking for tool inputs and agent outputs.
+
+Retry automatically on schema failures, reducing weird runtime bugs.
+
+Emit logs/traces via Logfire/OpenTelemetry into your observability stack.
+
+
+Haystack
+Layer: RAG + context pipelines.
+
+Responsibilities:
+
+Maintain pipelines for:
+
+Threat intel (CVEs, advisories, blog posts, feeds).
+
+Prior cases/incidents.
+
+Expose them as tools agents can call:
+
+haystack_search_threat_intel(query, ioc)
+
+haystack_similar_cases(case_signature)
+
+Keep retrieval logic explicit and debuggable.
+
+
+
+
+
+Observability Architecture — 
+Pack-Hunt SOC (LangGraph + Pydantic AI + Haystack + OTEL + MLflow)
+
+This document describes the observability design for the pack‑hunt security system, using:
+
+LangGraph for orchestration and state.
+
+Pydantic AI for type‑safe agent implementations, instrumented with Logfire.
+
+Haystack as the RAG/context layer.
+
+OpenTelemetry (OTel) as the common tracing/metrics/logging substrate.
+
+MLflow as the primary local observability backend and UI for traces, metrics, and evaluations.
+
+The goals are:
+
+Full real-time tracing of hunts across agents and tools.
+
+Detailed tool usage tracking for security and performance analysis.
+
+Integrated evaluation workflows for agents and RAG pipelines.

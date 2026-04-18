@@ -1,0 +1,118 @@
+flowchart LR
+
+    %% ========= LANE: CLIENTS / INPUTS =========
+    subgraph Inputs["Inputs & Clients"]
+        direction TB
+        A[Seed Input<br/>IOC / Alert / Hunt Query / Anomaly]
+        UI["Review UI<br/>(Analyst Console)"]
+    end
+
+    %% ========= LANE: ORCHESTRATION =========
+    subgraph Orchestrator["LangGraph Orchestrator<br/>(case-orchestrator)"]
+        direction TB
+        LG[LangGraph Hunt Graph<br/>Alpha / Tracker / Flanker / Closer / Scribe / Review]
+        CS[Case State Store<br/>Postgres: cases, hypotheses, pivots, branches]
+        EV[Event Bus<br/>NATS / Redis Streams / Kafka]
+    end
+
+    %% ========= LANE: AGENT IMPLEMENTATION (PYDANTIC AI) =========
+    subgraph Agents["Pydantic AI Agents<br/>(agents-service)"]
+        direction TB
+        TA[Tracker Agent<br/>Pydantic AI + tools]
+        FA[Flanker Agent<br/>Pydantic AI + tools]
+        CA[Closer Agent<br/>Pydantic AI + tools]
+        SA[Scribe Agent<br/>Logging only]
+    end
+
+    %% ========= LANE: CONTEXT / RAG =========
+    subgraph Context["RAG & Knowledge<br/>(rag-service)"]
+        direction TB
+        HAY[Haystack Pipelines<br/>Threat Intel + Case History]
+        KB[Knowledge Stores<br/>Threat Intel Indexes / Case Indexes]
+    end
+
+    %% ========= LANE: OBSERVABILITY CORE =========
+    subgraph Otel["Observability Core"]
+        direction TB
+        LS[OTel SDKs<br/>LangGraph / Agents / RAG]
+        OC[OpenTelemetry Collector]
+    end
+
+    %% ========= LANE: OBSERVABILITY BACKENDS =========
+    subgraph ObsBackends["Observability Backends"]
+        direction TB
+        ML[MLflow Tracking & UI<br/>LLM & Agent Observability]
+        Metrics["Metrics / Logs<br/>(Optional: Prometheus / Grafana / Jaeger)"]
+    end
+
+    %% ========= EDGES: CORE FLOW =========
+
+    %% Inputs to orchestrator
+    A --> EV
+    EV --> LG
+    UI --> LG
+
+    %% LangGraph to case state + agents
+    LG <--> CS
+    LG <--> EV
+
+    %% LangGraph calling agents via event bus / RPC
+    LG --> TA
+    LG --> FA
+    LG --> CA
+    LG --> SA
+
+    %% Agents calling tools and RAG
+    TA --> HAY
+    FA --> HAY
+    CA --> HAY
+
+    HAY <--> KB
+
+    %% Scribe writing evidence
+    SA --> CS
+
+    %% ========= EDGES: OBSERVABILITY =========
+
+    %% LangGraph instrumentation
+    LG --> LS
+    CS --> LS
+    EV --> LS
+
+    %% Agent instrumentation (Pydantic AI + Logfire emitting OTEL)
+    TA --> LS
+    FA --> LS
+    CA --> LS
+    SA --> LS
+
+    %% RAG instrumentation
+    HAY --> LS
+
+    %% OTel Collector as central hub
+    LS --> OC
+
+    %% Collector exports
+    OC --> ML
+    OC --> Metrics
+
+    %% ========= STYLES =========
+    classDef input fill:#E8F1FB,stroke:#2F6B9A,color:#0F2740,stroke-width:2px;
+    classDef orch fill:#EDE9FE,stroke:#6D28D9,color:#2B145A,stroke-width:2px;
+    classDef agents fill:#FFF7ED,stroke:#C2410C,color:#431407,stroke-width:2px;
+    classDef context fill:#ECFDF5,stroke:#0F766E,color:#073B3A,stroke-width:2px;
+    classDef otel fill:#FFE4F3,stroke:#BE185D,color:#500724,stroke-width:2px;
+    classDef obs fill:#F3F4F6,stroke:#4B5563,color:#111827,stroke-width:2px;
+
+    class A,UI input;
+    class LG,CS,EV orch;
+    class TA,FA,CA,SA agents;
+    class HAY,KB context;
+    class LS,OC otel;
+    class ML,Metrics obs;
+
+    style Inputs fill:#F8FBFF,stroke:#2F6B9A,stroke-width:2px,color:#0F2740
+    style Orchestrator fill:#FAF7FF,stroke:#6D28D9,stroke-width:2px,color:#2B145A
+    style Agents fill:#FFF9F2,stroke:#C2410C,stroke-width:2px,color:#431407
+    style Context fill:#F4FFFA,stroke:#0F766E,stroke-width:2px,color:#073B3A
+    style Otel fill:#FFF6FB,stroke:#BE185D,stroke-width:2px,color:#500724
+    style ObsBackends fill:#F9FAFB,stroke:#4B5563,stroke-width:2px,color:#111827

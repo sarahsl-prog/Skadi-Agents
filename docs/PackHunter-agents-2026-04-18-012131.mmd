@@ -1,0 +1,85 @@
+flowchart TB
+    %% Inputs
+    A[Seed Inputs<br/>IOC / Alert / Hunt Query / Anomaly] --> B[Alpha Dispatcher<br/>Task routing + light arbitration]
+
+    %% Shared services
+    B <--> C[Shared Case Memory<br/>Case state / hypotheses / pivots / confidence]
+    B <--> D[Event Bus<br/>Tasks / findings / branch updates / status]
+    B <--> E[Policy Guardrails<br/>Approval rules / execution boundaries]
+    B <--> F[Evidence Ledger<br/>Immutable timeline / replay trail]
+
+    %% V1 Pack
+    D --> G[Tracker Agent<br/>Find initial credible scent]
+    D --> H[Flanker Agent<br/>Expand sideways + elevate fresh branch]
+    D --> J[Closer Agent<br/>Assemble verdict + next-best action]
+    D --> K[Scribe Agent<br/>Logging only]
+
+    %% Shared memory + evidence interactions
+    G <--> C
+    H <--> C
+    J <--> C
+    K --> C
+
+    G --> D
+    H --> D
+    J --> D
+    K --> D
+
+    G --> F
+    H --> F
+    J --> F
+    K --> F
+
+    %% Data/tool sources
+    L[Telemetry Sources<br/>SIEM / EDR / IAM / DNS / Email / Cloud Logs] --> G
+    L --> H
+
+    M[Threat Intel + Knowledge<br/>ATT&amp;CK / CVEs / IOC feeds / Asset context] --> G
+    M --> H
+    M --> J
+
+    %% Human decision path
+    J --> N[Analyst Review]
+    E --> N
+    N --> O{Approve learning update?}
+
+    O -- Yes --> R[Learning Queue<br/>Approved dead ends / similar cases / playbook updates]
+    O -- No --> S[No memory update]
+
+    %% End states
+    N --> T{Case outcome}
+    T -- Escalate --> U[Escalation / Ticket / Case handoff]
+    T -- Benign --> V[Close benign]
+    T -- Continue hunt --> W[New tasks back to dispatcher]
+
+    W --> B
+    R --> C
+
+    %% V1.5 extensions
+    X[Blocker Agent - V1.5<br/>Predict escape paths + recommend containment]:::future
+    D -. future tasking .-> X
+    X -. future findings .-> D
+    X -. future evidence .-> F
+
+    Y[Post-Hunt Analyst Agent - V1.5<br/>Generate summaries / ATT&amp;CK mapping / lessons learned]:::future
+    N -. analyst-approved post-hunt analysis .-> Y
+    F -. evidence source .-> Y
+    C -. case context .-> Y
+    Y -. summary artifacts .-> Z[Post-Hunt Report / ATT&amp;CK Map / Lessons Learned]:::future
+
+    %% Classes
+    classDef input fill:#E8F1FB,stroke:#2F6B9A,color:#0F2740,stroke-width:2px;
+    classDef control fill:#EDE9FE,stroke:#6D28D9,color:#2B145A,stroke-width:2px;
+    classDef memory fill:#ECFDF5,stroke:#0F766E,color:#073B3A,stroke-width:2px;
+    classDef agent fill:#FFF7ED,stroke:#C2410C,color:#431407,stroke-width:2px;
+    classDef review fill:#FEF3C7,stroke:#B45309,color:#4A2C00,stroke-width:2px;
+    classDef outcome fill:#F3F4F6,stroke:#4B5563,color:#111827,stroke-width:2px;
+    classDef future fill:#FCE7F3,stroke:#BE185D,color:#500724,stroke-width:2px,stroke-dasharray: 6 4;
+
+    class A,L,M input;
+    class B,D,E control;
+    class C,F,R,S memory;
+    class G,H,J,K agent;
+    class N,O review;
+    class T,U,V,W outcome;
+    class X,Y,Z future;
