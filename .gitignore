@@ -16,6 +16,7 @@ env/
 
 # Environment / secrets
 .env
+docker-compose.override.yml
 *.local
 
 # Tools

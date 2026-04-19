@@ -1,0 +1,29 @@
+# WolfPack Docker Compose local overrides.
+# Copy to docker-compose.override.yml and adjust for your environment.
+# This file is gitignored — it never leaves your machine.
+
+services:
+  ollama:
+    # Uncomment to expose the Ollama API on the host.
+    # ports:
+    #   - "11434:11434"
+
+    # Override the smoke model (default: llama3.2:1b).
+    # environment:
+    #   - OLLAMA_SMOKETEST_MODEL=llama3.3:70b
+
+    # GPU passthrough (NVIDIA Container Toolkit required).
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  postgres:
+    # Increase memory for large datasets.
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 4G
