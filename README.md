@@ -1,4 +1,4 @@
-# WolfPack-Agents
+# Skadi-Agents
 
 A multi-agent, pack-hunt Security Operations Center (SOC) assistant. WolfPack-Agents triages seeds (IOCs, alerts, anomalies, or analyst-driven hunt queries) by coordinating a small team of specialized AI agents against shared case state and an immutable, hash-chained evidence ledger. Every decision is traceable, replayable, and gated on analyst review before anything enters institutional memory.
 
