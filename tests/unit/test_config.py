@@ -32,9 +32,7 @@ def _load(monkeypatch: pytest.MonkeyPatch, **overrides: str) -> Settings:
     "mode",
     ["dev", "on_prem_connected", "on_prem_airgapped"],
 )
-def test_settings_loads_for_all_modes(
-    monkeypatch: pytest.MonkeyPatch, mode: str
-) -> None:
+def test_settings_loads_for_all_modes(monkeypatch: pytest.MonkeyPatch, mode: str) -> None:
     settings = _load(monkeypatch, DEPLOYMENT_MODE=mode)
     assert settings.deployment_mode == DeploymentMode(mode)
 
@@ -63,9 +61,7 @@ def test_settings_private_url_accepted_in_airgapped(
         "http://8.8.8.8:11434",
     ],
 )
-def test_airgapped_rejects_public_base_url(
-    monkeypatch: pytest.MonkeyPatch, bad_url: str
-) -> None:
+def test_airgapped_rejects_public_base_url(monkeypatch: pytest.MonkeyPatch, bad_url: str) -> None:
     with pytest.raises(ValidationError, match="loopback or RFC-1918"):
         _load(
             monkeypatch,
