@@ -251,7 +251,7 @@ Keep retrieval logic explicit and debuggable.
 
 
 
-Observability Architecture — 
+Observability Architecture —
 Pack-Hunt SOC (LangGraph + Pydantic AI + Haystack + OTEL + MLflow)
 
 This document describes the observability design for the pack‑hunt security system, using:

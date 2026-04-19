@@ -69,7 +69,11 @@ The critical path is:
 
 Purpose: create the base Python project and developer workflow.
 
+Status: completed on 2026-04-18.
+
 #### A1. Create package and dependency manifest
+
+Status: completed.
 
 Tasks:
 
@@ -89,7 +93,16 @@ Acceptance checks:
 - `uv sync` completes successfully on a clean clone.
 - `python -c "import wolfpack"` works inside the `uv` environment after scaffolding.
 
+Validation notes:
+
+- Completed `pyproject.toml` with PEP 621 metadata, runtime dependencies, dev dependency group, Ruff, mypy, and pytest configuration.
+- Generated `uv.lock`.
+- Verified `uv sync --all-extras --dev`.
+- Verified `uv run python -c "import wolfpack; print(wolfpack.__doc__)"`.
+
 #### A2. Create source tree and placeholder packages
+
+Status: completed.
 
 Tasks:
 
@@ -106,7 +119,15 @@ Acceptance checks:
 - imports succeed for all Phase 0 modules
 - no Phase 1 logic exists in placeholder packages
 
+Validation notes:
+
+- Added the full `src/wolfpack/` Track A package tree.
+- Added only docstring placeholders to future-phase packages such as `schemas/`, `orchestrator/`, `agents/`, `rag/`, and `adapters/`.
+- Added minimal `tests/` scaffolding so the new unit-test hook has a stable target.
+
 #### A3. Configure repo tooling
+
+Status: completed.
 
 Tasks:
 
@@ -134,6 +155,16 @@ Acceptance checks:
 
 - `pre-commit run --all-files` passes
 - `just lint`, `just typecheck`, and `just test` exist and run
+
+Validation notes:
+
+- Added `justfile` targets for `install`, `fmt`, `lint`, `typecheck`, `test`, `test-integration`, `up`, `down`, and `smoke`.
+- Extended `.pre-commit-config.yaml` with local `mypy` and unit-test hooks.
+- Verified `uv run ruff check .`.
+- Verified `uv run mypy src tests`.
+- Verified `uv run pytest -q tests/unit`.
+- Verified `uv run pre-commit run --all-files`.
+- `just` is not installed in the current sandboxed shell, so command execution was validated through the underlying `uv run ...` commands that the `justfile` wraps.
 
 ### Track B: Configuration and Deployment Guards
 
