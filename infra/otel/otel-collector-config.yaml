@@ -1,0 +1,33 @@
+# WolfPack OpenTelemetry Collector configuration.
+# Accepts OTLP over HTTP (4318) and gRPC (4317).
+# Exports to the debug console by default.
+# MLflow exporter can be enabled when the bridge matures (see Playbook risk note).
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+exporters:
+  # Primary proof point during Phase 0 — log spans to stdout.
+  debug:
+    verbosity: detailed
+
+  # Placeholder for MLflow / Prometheus / Jaeger exporters in later phases.
+  # otlp/mlflow:
+  #   endpoint: http://mlflow:5000/api/2.0/mlflow/traces
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

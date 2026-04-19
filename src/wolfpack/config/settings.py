@@ -56,9 +56,7 @@ class Settings(BaseSettings):
         if self.deployment_mode is not DeploymentMode.ON_PREM_AIRGAPPED:
             return self
         if self.llm.hosted:
-            raise ValueError(
-                "hosted LLM providers are forbidden in on_prem_airgapped mode"
-            )
+            raise ValueError("hosted LLM providers are forbidden in on_prem_airgapped mode")
         if not is_loopback_or_private(self.llm.base_url):
             raise ValueError(
                 "llm.base_url must resolve to a loopback or RFC-1918 private address "

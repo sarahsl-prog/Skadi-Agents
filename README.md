@@ -1,4 +1,4 @@
-# Skadi-Agents
+# Skadi-Agents (WolfPack)
 
 A multi-agent, pack-hunt Security Operations Center (SOC) assistant. WolfPack-Agents triages seeds (IOCs, alerts, anomalies, or analyst-driven hunt queries) by coordinating a small team of specialized AI agents against shared case state and an immutable, hash-chained evidence ledger. Every decision is traceable, replayable, and gated on analyst review before anything enters institutional memory.
 
@@ -31,9 +31,86 @@ V1.5 adds a **Blocker** (containment recommendations) and a **Post-Hunt Analyst*
 | Observability | OpenTelemetry → MLflow (primary) |
 | Deployment | Single-tenant, on-prem |
 
+## Getting started
+
+### Prerequisites
+
+- **Python 3.11** (exact version enforced)
+- **uv** — [install](https://docs.astral.sh/uv/getting-started/installation/)
+- **Docker** — for the local infrastructure stack
+- **(Optional) NVIDIA GPU** — for Ollama inference; CPU-only works for the smoke test with `llama3.2:1b`
+
+### Setup
+
+```sh
+# Clone and enter the repo
+git clone https://github.com/sarahsl-prog/Skadi-Agents.git && cd Skadi-Agents
+
+# Install Python dependencies
+uv sync --all-extras --dev
+
+# Install pre-commit hooks
+pre-commit install
+
+# Copy and edit environment configuration
+cp .env.example .env
+# Edit .env for your deployment mode (dev, on_prem_connected, on_prem_airgapped)
+```
+
+### Start the local stack
+
+```sh
+# Minimal stack (Postgres, NATS, OTel Collector, Ollama)
+docker compose up -d
+
+# Full stack (add MLflow tracking server)
+docker compose --profile full up -d
+
+# Stop and clean up
+docker compose --profile full down --remove-orphans
+```
+
+### Run the smoke test
+
+```sh
+# Requires the local stack to be running
+just smoke
+# Or: uv run python -m wolfpack.smoke.hello_pack
+```
+
+This runs a traced LLM call and prints the trace ID, span ID, and OTel endpoint for inspection.
+
+### Common commands
+
+```sh
+just install             # Install all dependencies
+just fmt                 # Format code (ruff)
+just lint                # Lint code (ruff)
+just typecheck           # Type-check (mypy strict)
+just test                # Run unit tests
+just test-integration    # Run integration tests (requires Docker)
+```
+
+### Docker Compose profiles
+
+| Profile | Services | Use case |
+|---|---|---|
+| default | postgres, nats, otel-collector, ollama | Development, CI |
+| full | default + mlflow | Full observability stack |
+
+### GPU overrides
+
+Copy `docker-compose.override.yml.example` to `docker-compose.override.yml` and uncomment the NVIDIA device section. Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
+
+## Infrastructure sizing
+
+See [`infra/sizing.md`](infra/sizing.md) for hardware recommendations (enterprise vs. dev/CI profiles).
+
 ## Documentation
 
 - [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) — phased delivery plan, confirmed design decisions, open questions, and recommendations.
+- [`docs/PHASE_0_PLAN.md`](docs/PHASE_0_PLAN.md) — Phase 0 implementation plan.
+- [`docs/PHASE_0_IMPLEMENTATION_PLAYBOOK.md`](docs/PHASE_0_IMPLEMENTATION_PLAYBOOK.md) — execution-ready Phase 0 runbook.
 - [`docs/tech-stack.txt`](docs/tech-stack.txt) — architecture rationale and a walk-through of a hunt.
 - Diagrams in `docs/`:
   - `LangGraph Agent Ecosystem` — service topology.
@@ -44,18 +121,7 @@ V1.5 adds a **Blocker** (containment recommendations) and a **Post-Hunt Analyst*
 
 ## Status
 
-Pre-implementation. The architecture and delivery plan are drafted; the codebase has not been scaffolded yet. See the project plan for phasing.
-
-## Development
-
-Pre-commit hooks run on every commit (file hygiene, secret scanning via gitleaks, Python lint/format via Ruff). Install them once with:
-
-```sh
-pip install pre-commit
-pre-commit install
-```
-
-Run against the whole tree any time with `pre-commit run --all-files`.
+Phase 0 complete. The repository scaffold, config/LLM abstractions, Docker infrastructure, observability wiring, smoke-test CLI, and CI pipeline are in place. See the project plan for remaining phases.
 
 ## License
 

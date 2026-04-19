@@ -213,3 +213,29 @@ All blocking design questions from earlier drafts are resolved in §0. The remai
 ## 9. Status
 
 All blocking design questions are resolved. The plan is ready to move into Phase 0 execution. Remaining items in §7 are phase-scoped operational details that do not block earlier work.
+
+---
+
+## Phase 0 Retro (completed 2026-04-19)
+
+**Actual duration:** ~1 day (Tracks A–C were done on 2026-04-18; Tracks D–G on 2026-04-19).
+
+**What landed:**
+- Track A: Repo scaffold, pyproject.toml, uv.lock, justfile, Ruff/mypy/pytest config, pre-commit hooks.
+- Track B: DeploymentMode enum, is_loopback_or_private() guard, Settings with pydantic-settings and airgapped enforcement, .env.example.
+- Track C: OllamaProvider and OpenAICompatibleProvider wrappers, get_model() factory, LLMConfigError, unit tests with mocked network.
+- Track D: docker-compose.yml (5 services, MLflow behind 'full' profile), infra/ configs (postgres init.sql, nats-server.conf, otel-collector-config.yaml, mlflow Dockerfile, ollama entrypoint.sh), sizing.md, override example.
+- Track E: OTel TracerProvider bootstrap with OTLP HTTP exporter, Logfire wiring, Typer smoke CLI with traced LLM call.
+- Track F: conftest.py shared fixtures, observability unit tests, testcontainers integration tests, real ci.yml replacing blank.yml.
+- Track G: README refreshed with getting-started guide, this retro note.
+
+**Deviations from plan:**
+- The justfile originally used PowerShell syntax (from a Windows/WSL authoring environment); corrected to POSIX shell.
+- Placeholder tests (test_placeholder.py) were removed rather than left as dead weight.
+- MLflow is gated behind a Docker Compose profile (`full`) rather than a separate minimal CI profile — functionally equivalent.
+
+**Unresolved risks carried forward:**
+- OTel-to-MLflow bridge maturity — Phase 0 uses the debug exporter as the proof point; MLflow trace ingestion is deferred to Phase 6 observability hardening.
+- Integration tests require Docker and are skipped by default (`SKIP_INTEGRATION=1`); CI should run them with Docker available.
+
+**Next phase:** Phase 1 — Contracts & case state (schemas, Postgres schema, hash-chained ledger, crypto-shredding architecture).

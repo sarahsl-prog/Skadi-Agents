@@ -31,6 +31,9 @@ dependencies = [
   "typer>=0.19.2",
 ]
 
+[project.scripts]
+wolfpack-smoke = "wolfpack.smoke.hello_pack:app"
+
 [project.optional-dependencies]
 dev = [
   "mypy>=1.18.2",
