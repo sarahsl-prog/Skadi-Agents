@@ -34,18 +34,6 @@ dependencies = [
 [project.scripts]
 wolfpack-smoke = "wolfpack.smoke.hello_pack:app"
 
-[project.optional-dependencies]
-dev = [
-  "mypy>=1.18.2",
-  "pre-commit>=4.3.0",
-  "pytest>=8.4.2",
-  "pytest-asyncio>=1.2.0",
-  "pytest-cov>=7.0.0",
-  "respx>=0.22.0",
-  "ruff>=0.14.0",
-  "testcontainers[nats,postgres]>=4.13.2",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/wolfpack"]
 

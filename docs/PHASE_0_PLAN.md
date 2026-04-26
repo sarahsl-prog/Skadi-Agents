@@ -165,8 +165,8 @@ Rough day-by-day cut — parallelizable where noted.
 ### Day 6 — CI hardening
 
 - [ ] `.github/workflows/ci.yml`:
-  - Jobs: `lint` (already covered by pre-commit), `typecheck` (mypy), `test-unit` (pytest), `test-integration` (testcontainers; allowed to be slower + cached), `build` (`docker compose --profile minimal build`).
-  - Integration tests use the `minimal` compose profile (no MLflow) per the Phase 0 decision.
+  - Jobs: `lint` (already covered by pre-commit), `typecheck` (mypy), `test-unit` (pytest), `test-integration` (testcontainers; allowed to be slower + cached), `build` (`docker compose config`).
+  - Integration tests run against the default compose stack (no MLflow needed).
   - Python matrix pinned to 3.11 (no matrix yet; keep it simple).
   - Use `astral-sh/setup-uv@v3` for fast dep install.
 - [ ] Branch protection for `main` after PR #1 merges (not a code change — record as a follow-up checklist item for the owner).
@@ -282,6 +282,6 @@ Before Phase 1 starts:
 
 ## 9. Phase 0 Decisions (resolved)
 
-- **MLflow in CI: optional.** CI runs with the OTel Collector's `debug` exporter only — saves ~200 MB of container weight and several seconds per run. Local `just up` still brings MLflow by default; CI uses a compose profile (`--profile minimal`) that omits it.
+- **MLflow in CI: optional.** CI runs with the OTel Collector's `debug` exporter only — saves ~200 MB of container weight and several seconds per run. MLflow is gated behind the `full` compose profile; the default `docker compose up` omits it.
 - **Ollama model for CI/dev smoke: `llama3.2:1b`.** Fits on a laptop CPU, < 1 GB. Production deployments swap to Llama 3.3 70B Instruct per `infra/sizing.md`.
 - **Project layout: `pyproject.toml` with PEP 621 `[project]` table** (uv-managed). No Poetry-style `[tool.poetry]` block.

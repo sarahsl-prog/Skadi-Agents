@@ -121,6 +121,58 @@ def test_mlflow_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # ---------------------------------------------------------------------------
+# URL scheme validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "localhost:11434",      # no scheme
+        "ftp://localhost:11434",  # wrong scheme
+        "file:///etc/passwd",    # wrong scheme
+    ],
+)
+def test_llm_config_rejects_invalid_url_scheme(
+    monkeypatch: pytest.MonkeyPatch, bad_url: str
+) -> None:
+    with pytest.raises(ValidationError, match="scheme"):
+        _load(monkeypatch, DEPLOYMENT_MODE="dev", LLM__BASE_URL=bad_url)
+
+
+# ---------------------------------------------------------------------------
+# Timeout bounds
+# ---------------------------------------------------------------------------
+
+
+def test_llm_config_rejects_negative_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    with pytest.raises(ValidationError, match="positive"):
+        _load(monkeypatch, DEPLOYMENT_MODE="dev", LLM__REQUEST_TIMEOUT_S="-5.0")
+
+
+def test_llm_config_rejects_zero_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    with pytest.raises(ValidationError, match="positive"):
+        _load(monkeypatch, DEPLOYMENT_MODE="dev", LLM__REQUEST_TIMEOUT_S="0")
+
+
+# ---------------------------------------------------------------------------
+# Postgres pool size consistency
+# ---------------------------------------------------------------------------
+
+
+def test_postgres_config_rejects_inverted_pool_sizes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with pytest.raises(ValidationError, match="pool_min_size"):
+        _load(
+            monkeypatch,
+            DEPLOYMENT_MODE="dev",
+            POSTGRES__POOL_MIN_SIZE="10",
+            POSTGRES__POOL_MAX_SIZE="2",
+        )
+
+
+# ---------------------------------------------------------------------------
 # SecretStr: DSN value is not exposed in repr
 # ---------------------------------------------------------------------------
 

@@ -54,6 +54,25 @@ def test_postgres_starts_and_responds(postgres_container: Any) -> None:
     assert "postgresql" in connection_url
 
 
+@pytest.mark.asyncio
+async def test_postgres_has_pgvector(postgres_container: Any) -> None:
+    """Postgres container must have the pgvector extension installed."""
+    import asyncpg  # type: ignore[import-untyped]
+
+    dsn = postgres_container.get_connection_url().replace(
+        "postgresql+psycopg2://", "postgresql://"
+    )
+    conn = await asyncpg.connect(dsn)
+    try:
+        await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        row = await conn.fetchval(
+            "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector')"
+        )
+        assert row is True
+    finally:
+        await conn.close()
+
+
 # ---------------------------------------------------------------------------
 # NATS
 # ---------------------------------------------------------------------------
@@ -65,3 +84,20 @@ def test_nats_starts_and_exposes_port(nats_container: Any) -> None:
     port = nats_container.get_exposed_port(4222)
     assert host
     assert port
+
+
+@pytest.mark.asyncio
+async def test_nats_has_jetstream(nats_container: Any) -> None:
+    """NATS container must have JetStream enabled."""
+    import nats
+
+    host = nats_container.get_container_host_ip()
+    port = nats_container.get_exposed_port(4222)
+    nc = await nats.connect(f"nats://{host}:{port}")
+    try:
+        js = nc.jetstream()
+        await js.add_stream(name="TEST_STREAM", subjects=["test.>"])
+        info = await js.stream_info("TEST_STREAM")
+        assert info is not None
+    finally:
+        await nc.close()
