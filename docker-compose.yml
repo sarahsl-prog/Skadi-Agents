@@ -1,6 +1,6 @@
 # WolfPack local development stack.
-# Usage:  docker compose up -d        (all services)
-#         docker compose --profile minimal up -d  (without MLflow)
+# Usage:  docker compose up -d        (default services: postgres, nats, otel-collector, ollama)
+#         docker compose --profile full up -d  (default + MLflow)
 #
 # See infra/sizing.md for resource recommendations.
 
@@ -51,7 +51,7 @@ services:
 
   # ── OpenTelemetry Collector ─────────────────────────────────────────────
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.123.0
     command: ["--config=/etc/otel/otel-collector-config.yaml"]
     ports:
       - "4317:4317"   # OTLP gRPC

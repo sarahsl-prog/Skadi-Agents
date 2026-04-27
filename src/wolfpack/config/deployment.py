@@ -15,12 +15,15 @@ def is_loopback_or_private(url: str) -> bool:
     """Return True if the URL's host is a loopback or RFC-1918 private address.
 
     Non-IP hostnames (other than 'localhost') are conservatively treated as public.
+    IPv6 loopback (::1) is also accepted.
     This is called at config load time to enforce airgapped deployment restrictions.
     """
     host = urlparse(url).hostname or ""
     if not host:
         return False
     if host == "localhost":
+        return True
+    if host == "::1":
         return True
     try:
         addr = ipaddress.ip_address(host)

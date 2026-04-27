@@ -618,7 +618,7 @@ docker compose config
 just up
 just smoke
 just test-integration
-docker compose --profile minimal build
+docker compose --profile full config
 ```
 
 All of these should succeed before Phase 0 is marked complete.

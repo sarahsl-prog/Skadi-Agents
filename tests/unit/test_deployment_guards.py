@@ -13,6 +13,8 @@ from wolfpack.config.deployment import DeploymentMode, is_loopback_or_private
         ("http://localhost", True),
         ("http://127.0.0.1:11434", True),
         ("http://127.0.0.1", True),
+        ("http://[::1]:11434", True),
+        ("http://[::1]", True),
         # RFC-1918 private ranges
         ("http://10.0.0.1:11434", True),
         ("http://10.255.255.255:11434", True),
@@ -29,6 +31,8 @@ from wolfpack.config.deployment import DeploymentMode, is_loopback_or_private
         ("http://my-remote-server.example.com", False),
         # Edge cases
         ("http://", False),
+        ("localhost:11434", False),   # urlparse treats schemeless as path
+        ("", False),
     ],
 )
 def test_is_loopback_or_private(url: str, expected: bool) -> None:

@@ -60,7 +60,7 @@ cp .env.example .env
 ### Start the local stack
 
 ```sh
-# Minimal stack (Postgres, NATS, OTel Collector, Ollama)
+# Default stack (Postgres, NATS, OTel Collector, Ollama)
 docker compose up -d
 
 # Full stack (add MLflow tracking server)
