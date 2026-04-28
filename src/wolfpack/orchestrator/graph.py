@@ -49,21 +49,56 @@ def _route_after_review(state: CaseState) -> str:
     return END
 
 
+NodeFn = Callable[[CaseState], dict[str, Any]]
+
+
+def _wrap_with_nats(
+    node: NodeFn,
+    subject: str,
+    nats_client: Any,
+) -> NodeFn:
+    """Return an async wrapper that publishes node output to NATS."""
+    import asyncio
+
+    async def _async_wrapped(state: CaseState) -> dict[str, Any]:
+        result = node(state)
+        await nats_client.publish(subject, result)
+        return result
+
+    def _sync_wrapped(state: CaseState) -> dict[str, Any]:
+        # Fire-and-forget from a sync node; acceptable for Phase 2
+        # skeleton where NATS is best-effort fan-out.
+        result = node(state)
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(nats_client.publish(subject, result))  # noqa: RUF006
+        except RuntimeError:
+            asyncio.run(nats_client.publish(subject, result))
+        return result
+
+    # Prefer sync wrapper to keep graph topology simple in Phase 2.
+    return _sync_wrapped
+
+
 def build_hunt_graph(
     *,
     use_stubs: bool = True,
-    alpha: Callable[[CaseState], dict[str, Any]] | None = None,
-    tracker: Callable[[CaseState], dict[str, Any]] | None = None,
-    flanker: Callable[[CaseState], dict[str, Any]] | None = None,
-    closer: Callable[[CaseState], dict[str, Any]] | None = None,
-    review: Callable[[CaseState], dict[str, Any]] | None = None,
-    scribe: Callable[[CaseState], dict[str, Any]] | None = None,
+    alpha: NodeFn | None = None,
+    tracker: NodeFn | None = None,
+    flanker: NodeFn | None = None,
+    closer: NodeFn | None = None,
+    review: NodeFn | None = None,
+    scribe: NodeFn | None = None,
+    nats_client: Any | None = None,
 ) -> Any:
     """Compile the hunt graph.
 
     When ``use_stubs`` is ``True`` (the default) every agent slot is
     filled with its deterministic stub from :mod:`wolfpack.orchestrator.stubs`.
     Real agent implementations can be injected via the keyword arguments.
+
+    If ``nats_client`` is provided, each main node publishes its output to
+    the appropriate NATS subject after execution.
 
     The graph can be invoked with a ``CaseState`` dict:
 
@@ -97,6 +132,15 @@ def build_hunt_graph(
             review = stub_review
         if scribe is None:
             scribe = stub_scribe
+
+    assert alpha is not None and tracker is not None and flanker is not None and closer is not None and review is not None
+
+    if nats_client is not None:
+        alpha = _wrap_with_nats(alpha, "hunt.task.tracker", nats_client)
+        tracker = _wrap_with_nats(tracker, "hunt.finding.tracker", nats_client)
+        flanker = _wrap_with_nats(flanker, "hunt.finding.flanker", nats_client)
+        closer = _wrap_with_nats(closer, "hunt.status.verdict", nats_client)
+        review = _wrap_with_nats(review, "hunt.status.review", nats_client)
 
     builder = StateGraph(CaseState)
 
