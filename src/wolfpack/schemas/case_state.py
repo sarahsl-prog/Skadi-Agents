@@ -98,6 +98,10 @@ class CaseState(BaseModel):
         default=None,
         description="Closer-assessed overall confidence (set at verdict time).",
     )
+    review_started_at: datetime | None = Field(
+        default=None,
+        description="UTC timestamp when the case entered review status.",
+    )
     version: int = Field(
         default=1,
         ge=1,

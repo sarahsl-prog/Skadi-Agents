@@ -133,7 +133,8 @@ def build_hunt_graph(
         if scribe is None:
             scribe = stub_scribe
 
-    assert alpha is not None and tracker is not None and flanker is not None and closer is not None and review is not None
+    if alpha is None or tracker is None or flanker is None or closer is None or review is None:
+        raise RuntimeError("All main agent nodes must be provided or use_stubs=True")
 
     if nats_client is not None:
         alpha = _wrap_with_nats(alpha, "hunt.task.tracker", nats_client)
