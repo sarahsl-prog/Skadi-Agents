@@ -32,3 +32,10 @@ down:
 # Run the Phase 0 smoke test against the local stack.
 smoke:
     uv run python -m wolfpack.smoke.hello_pack
+
+# Alembic migrations
+migrate:
+    uv run alembic upgrade head
+
+migrate-create msg:
+    uv run alembic revision -m "{{msg}}"
