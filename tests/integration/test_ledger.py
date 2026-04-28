@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 import asyncpg
@@ -24,7 +25,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture()
-async def ledger_pool():
+async def ledger_pool() -> AsyncGenerator[asyncpg.Pool]:
     from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("pgvector/pgvector:pg16").start() as pg:
@@ -53,7 +54,7 @@ async def ledger_pool():
 
 
 @pytest.fixture()
-async def ledger_conn(ledger_pool):
+async def ledger_conn(ledger_pool: asyncpg.Pool) -> AsyncGenerator[asyncpg.Connection]:
     conn = await ledger_pool.acquire()
     try:
         yield conn
@@ -122,7 +123,7 @@ class TestLedgerChainIntegrity:
         assert is_valid is False
         assert broken_at == entry_id
 
-    async def test_concurrent_inserts(self, ledger_pool) -> None:
+    async def test_concurrent_inserts(self, ledger_pool: asyncpg.Pool) -> None:
         case_id = str(uuid.uuid4())
         conn = await ledger_pool.acquire()
         try:
