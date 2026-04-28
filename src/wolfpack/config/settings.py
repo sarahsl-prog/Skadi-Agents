@@ -73,6 +73,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_nested_delimiter="__",
         case_sensitive=False,
+        extra="ignore",
     )
 
     deployment_mode: DeploymentMode

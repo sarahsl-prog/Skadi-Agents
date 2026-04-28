@@ -78,6 +78,22 @@ class CaseState(BaseModel):
         default_factory=list,
         description="Case-level evidence (aggregated from branches).",
     )
+    tracker_confidence: Confidence | None = Field(
+        default=None,
+        description="Tracker-assessed confidence (used for routing).",
+    )
+    flanker_confidence: Confidence | None = Field(
+        default=None,
+        description="Flanker-assessed confidence (used for routing).",
+    )
+    review_decision: str | None = Field(
+        default=None,
+        description="Analyst review decision: approved, escalate, close_benign, continue.",
+    )
+    verdict_decision: str | None = Field(
+        default=None,
+        description="Closer verdict: benign, suspicious, malicious, inconclusive.",
+    )
     overall_confidence: Confidence | None = Field(
         default=None,
         description="Closer-assessed overall confidence (set at verdict time).",
