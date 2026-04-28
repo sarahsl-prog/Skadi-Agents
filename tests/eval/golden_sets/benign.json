@@ -1,0 +1,39 @@
+{
+  "name": "benign",
+  "description": "Normal user activity with no suspicious indicators.",
+  "seed": {
+    "type": "hunt_query",
+    "raw_payload": {
+      "entities": [
+        {"type": "user", "value": "bob@corp.com"}
+      ],
+      "source": "hunt"
+    },
+    "metadata": {"severity": "low", "confidence": 0.2}
+  },
+  "expected_hypotheses": [
+    {
+      "description": "No suspicious activity detected for bob@corp.com",
+      "confidence": 1
+    }
+  ],
+  "expected_confidence": 1,
+  "telemetry": [
+    {
+      "source": "okta",
+      "events": [
+        {"event_type": "user.session.start", "actor": "bob@corp.com", "client_ip": "10.0.0.20"}
+      ]
+    },
+    {
+      "source": "syslog",
+      "events": [
+        {"host": "bob-laptop", "message": "Normal login from bob@corp.com"}
+      ]
+    }
+  ],
+  "expected_evidence": [
+    {"source_type": "okta", "source_id": "normal-login"},
+    {"source_type": "syslog", "source_id": "routine-activity"}
+  ]
+}

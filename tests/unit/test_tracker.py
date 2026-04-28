@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from pydantic_ai.models.test import TestModel
 
 from wolfpack.agents.tracker import (
