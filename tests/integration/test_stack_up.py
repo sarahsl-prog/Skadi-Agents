@@ -22,7 +22,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture()
 def postgres_container() -> Any:
     """Start a Postgres/pgvector container and yield it."""
-    from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
+    from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("pgvector/pgvector:pg16").start() as pg:
         yield pg
@@ -31,7 +31,7 @@ def postgres_container() -> Any:
 @pytest.fixture()
 def nats_container() -> Any:
     """Start a NATS container and yield it."""
-    from testcontainers.core.generic import DockerContainer  # type: ignore[import-untyped]
+    from testcontainers.core.generic import DockerContainer
 
     container = (
         DockerContainer("nats:2-alpine")
@@ -57,7 +57,7 @@ def test_postgres_starts_and_responds(postgres_container: Any) -> None:
 @pytest.mark.asyncio
 async def test_postgres_has_pgvector(postgres_container: Any) -> None:
     """Postgres container must have the pgvector extension installed."""
-    import asyncpg  # type: ignore[import-untyped]
+    import asyncpg
 
     dsn = postgres_container.get_connection_url().replace(
         "postgresql+psycopg2://", "postgresql://"

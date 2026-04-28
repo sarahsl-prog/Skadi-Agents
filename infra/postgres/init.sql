@@ -4,5 +4,8 @@
 -- pgvector extension for Haystack RAG (Phase 3+)
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Phase 1 tables will be added in a follow-up migration.
--- This script guarantees the extension is available at first start.
+-- Application schema for Phase 1 tables
+CREATE SCHEMA IF NOT EXISTS wolfpack;
+
+-- Phase 1 tables are managed by Alembic migrations.
+-- This script guarantees extensions and base schema exist at first start.

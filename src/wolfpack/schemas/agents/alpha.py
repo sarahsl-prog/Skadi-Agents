@@ -1,0 +1,33 @@
+"""Alpha Dispatcher agent I/O models."""
+
+from pydantic import BaseModel, Field
+
+from wolfpack.schemas.case_state import CaseState
+from wolfpack.schemas.seed import Seed
+
+
+class AlphaInput(BaseModel):
+    """Input to the Alpha Dispatcher.
+
+    Alpha receives a seed, normalises it, creates a ``CaseState``,
+    and publishes the initial task list.
+    """
+
+    seed: Seed = Field(..., description="Raw seed from the ingestion pipeline.")
+
+
+class AlphaOutput(BaseModel):
+    """Output from the Alpha Dispatcher.
+
+    Alpha returns the newly created case state and the first task
+    routing decision.
+    """
+
+    case_state: CaseState = Field(..., description="Initial case state after creation.")
+    next_agent: str = Field(
+        default="tracker",
+        description="Agent that should receive the next task.",
+    )
+    task_description: str = Field(
+        default="", description="Human-readable task for the next agent."
+    )
