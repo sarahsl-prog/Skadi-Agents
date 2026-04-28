@@ -15,7 +15,7 @@ invoked with a ``CaseState`` dict.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
@@ -49,7 +49,10 @@ def _route_after_review(state: CaseState) -> str:
     return END
 
 
-NodeFn = Callable[[CaseState], dict[str, Any]]
+NodeFn = (
+    Callable[[CaseState], dict[str, Any]]
+    | Callable[[CaseState], Awaitable[dict[str, Any]]]
+)
 
 
 def _wrap_with_nats(
@@ -63,7 +66,7 @@ def _wrap_with_nats(
     async def _async_wrapped(state: CaseState) -> dict[str, Any]:
         result = node(state)
         await nats_client.publish(subject, result)
-        return result
+        return result  # type: ignore[return-value]
 
     def _sync_wrapped(state: CaseState) -> dict[str, Any]:
         # Fire-and-forget from a sync node; acceptable for Phase 2
@@ -74,7 +77,7 @@ def _wrap_with_nats(
             loop.create_task(nats_client.publish(subject, result))  # noqa: RUF006
         except RuntimeError:
             asyncio.run(nats_client.publish(subject, result))
-        return result
+        return result  # type: ignore[return-value]
 
     # Prefer sync wrapper to keep graph topology simple in Phase 2.
     return _sync_wrapped
