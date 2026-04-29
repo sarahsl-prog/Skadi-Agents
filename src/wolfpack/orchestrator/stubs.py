@@ -69,6 +69,8 @@ def stub_flanker(state: CaseState) -> dict[str, Any]:
     """
     return {
         "flanker_confidence": Confidence.WEAK,
+        "significant_findings": False,
+        "re_check_count": state.re_check_count + 1,
     }
 
 
