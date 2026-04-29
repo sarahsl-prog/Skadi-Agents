@@ -86,6 +86,15 @@ class CaseState(BaseModel):
         default=None,
         description="Flanker-assessed confidence (used for routing).",
     )
+    re_check_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of Tracker→Flanker re-check iterations completed.",
+    )
+    significant_findings: bool = Field(
+        default=False,
+        description="Whether Flanker produced significant new findings warranting re-check.",
+    )
     review_decision: str | None = Field(
         default=None,
         description="Analyst review decision: approved, escalate, close_benign, continue.",

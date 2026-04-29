@@ -1,6 +1,7 @@
 """Settings models for WolfPack services."""
 
-from typing import Literal
+import json
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
@@ -68,6 +69,15 @@ class MLflowConfig(BaseModel):
     tracking_uri: str = "http://localhost:5000"
 
 
+class BranchBudgetConfig(BaseModel):
+    max_depth: int = 3
+    max_branches_per_case: int = 10
+    # NOTE: token_budget_per_branch and tool_budget_per_branch are
+    # reserved for V2. They require LLM-provider instrumentation that
+    # is not yet wired into the graph nodes. Only depth and branch
+    # count are enforced in V1.
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -82,6 +92,27 @@ class Settings(BaseSettings):
     nats: NATSConfig = Field(default_factory=NATSConfig)
     otel: OTelConfig = Field(default_factory=OTelConfig)
     mlflow: MLflowConfig = Field(default_factory=MLflowConfig)
+    branch_budget: BranchBudgetConfig = Field(default_factory=BranchBudgetConfig)
+    feature_flags: dict[str, bool] = Field(default_factory=dict)
+
+    @field_validator("feature_flags", mode="before")
+    @classmethod
+    def _parse_feature_flags(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+    @model_validator(mode="after")
+    def _merge_feature_flag_defaults(self) -> "Settings":
+        defaults = {
+            "adapter_dns": False,
+            "adapter_zeek_suricata": False,
+            "adapter_proxy": False,
+            "adapter_cloudtrail": False,
+        }
+        for key, val in defaults.items():
+            self.feature_flags.setdefault(key, val)
+        return self
 
     @model_validator(mode="after")
     def enforce_airgapped(self) -> "Settings":

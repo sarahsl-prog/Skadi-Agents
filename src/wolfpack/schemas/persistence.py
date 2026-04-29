@@ -189,6 +189,39 @@ class CasePersistence:
         finally:
             await self._pool.release(conn)
 
+    async def list_branches_for_case(self, case_id: str) -> list[BranchState]:
+        """Fetch all branches for a case."""
+        conn = await self._pool.acquire()
+        try:
+            rows = await conn.fetch(
+                "SELECT id, case_id, parent_branch_id, hypothesis, depth, "
+                "status, version, created_at FROM wolfpack.branches WHERE case_id = $1",
+                case_id,
+            )
+            branches: list[BranchState] = []
+            for row in rows:
+                hyp_data = row["hypothesis"]
+                if isinstance(hyp_data, str):
+                    hyp_data = json.loads(hyp_data)
+                branches.append(
+                    BranchState(
+                        branch_id=str(row["id"]),
+                        case_id=str(row["case_id"]),
+                        parent_branch_id=(
+                            str(row["parent_branch_id"])
+                            if row["parent_branch_id"]
+                            else None
+                        ),
+                        spec=BranchSpec.model_validate(hyp_data),
+                        status=row["status"],
+                        version=row["version"],
+                        created_at=row["created_at"],
+                    )
+                )
+            return branches
+        finally:
+            await self._pool.release(conn)
+
     async def update_branch(
         self, branch_id: str, status: str, expected_version: int
     ) -> int:
