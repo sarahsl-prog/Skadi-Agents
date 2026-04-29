@@ -18,8 +18,15 @@ from wolfpack.schemas.entity import Entity
 class AdapterDeps:
     """Dependencies injected into adapter tools."""
 
-    def __init__(self, adapters: dict[str, TelemetrySource]) -> None:
+    def __init__(
+        self,
+        adapters: dict[str, TelemetrySource],
+        case_id: str | None = None,
+        pii_pipeline: Any | None = None,
+    ) -> None:
         self.adapters = adapters
+        self.case_id = case_id
+        self.pii_pipeline = pii_pipeline
 
 
 def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
@@ -43,7 +50,15 @@ def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
         end = datetime.fromisoformat(end_iso.replace("Z", "+00:00"))
         time_window = TimeWindow(start=start, end=end)
         events = await adapter.query(entity, time_window)
-        return events[:top_k]
+        events = events[:top_k]
+
+        # Apply PII sanitization when a pipeline is provided
+        if ctx.deps.pii_pipeline is not None and ctx.deps.case_id is not None:
+            events = await ctx.deps.pii_pipeline.sanitize_events(
+                events, ctx.deps.case_id
+            )
+
+        return events
 
     _tool.__name__ = f"{adapter.name}_query"
     _tool.__doc__ = (
@@ -53,9 +68,27 @@ def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
     return _tool
 
 
-def build_adapter_tools(adapters: list[TelemetrySource]) -> dict[str, Any]:
-    """Return a mapping of tool name → tool function for all adapters."""
-    return {
-        f"{adapter.name}_query": telemetry_tool_factory(adapter)
-        for adapter in adapters
-    }
+_TIER_1_ADAPTERS = frozenset(
+    {"syslog", "windows_eventlog", "crowdstrike", "okta", "firewall"}
+)
+
+
+def build_adapter_tools(
+    adapters: list[TelemetrySource],
+    feature_flags: dict[str, bool] | None = None,
+) -> dict[str, Any]:
+    """Return a mapping of tool name → tool function for all adapters.
+
+    Tier-1 adapters are always registered. Tier-2 adapters are only
+    included when their corresponding feature flag is enabled.
+    """
+    feature_flags = feature_flags or {}
+    tools: dict[str, Any] = {}
+    for adapter in adapters:
+        if adapter.name in _TIER_1_ADAPTERS:
+            tools[f"{adapter.name}_query"] = telemetry_tool_factory(adapter)
+        else:
+            flag_name = f"adapter_{adapter.name}"
+            if feature_flags.get(flag_name, False):
+                tools[f"{adapter.name}_query"] = telemetry_tool_factory(adapter)
+    return tools
