@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 import pytest
@@ -22,7 +23,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture()
-async def persistence_pool():
+async def persistence_pool() -> AsyncGenerator[PersistencePool]:
     from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("pgvector/pgvector:pg16").start() as pg:

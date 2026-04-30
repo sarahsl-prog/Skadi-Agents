@@ -1,0 +1,39 @@
+{
+  "name": "false_positive",
+  "description": "Legitimate admin activity mimics suspicious behavior — should be down-ranked.",
+  "seed": {
+    "type": "anomaly",
+    "raw_payload": {
+      "entities": [
+        {"type": "user", "value": "admin@corp.com"}
+      ],
+      "source": "ueba"
+    },
+    "metadata": {"severity": "medium", "confidence": 0.5}
+  },
+  "expected_hypotheses": [
+    {
+      "description": "Activity is consistent with known admin maintenance window",
+      "confidence": 1
+    }
+  ],
+  "expected_confidence": 1,
+  "telemetry": [
+    {
+      "source": "syslog",
+      "events": [
+        {"host": "admin-workstation", "message": "User admin@corp.com executed sudo apt update"}
+      ]
+    },
+    {
+      "source": "okta",
+      "events": [
+        {"event_type": "user.session.start", "actor": "admin@corp.com", "client_ip": "10.0.0.10"}
+      ]
+    }
+  ],
+  "expected_evidence": [
+    {"source_type": "syslog", "source_id": "maintenance-activity"},
+    {"source_type": "okta", "source_id": "known-source-ip"}
+  ]
+}

@@ -49,3 +49,7 @@ class FlankerOutput(BaseModel):
     flanker_confidence: Confidence = Field(
         ..., description="Flanker's confidence in the lateral findings."
     )
+    significant_findings: bool = Field(
+        default=False,
+        description="Whether Flanker produced materially new entities, pivots, or hypothesis updates.",
+    )

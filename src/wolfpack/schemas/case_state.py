@@ -78,9 +78,38 @@ class CaseState(BaseModel):
         default_factory=list,
         description="Case-level evidence (aggregated from branches).",
     )
+    tracker_confidence: Confidence | None = Field(
+        default=None,
+        description="Tracker-assessed confidence (used for routing).",
+    )
+    flanker_confidence: Confidence | None = Field(
+        default=None,
+        description="Flanker-assessed confidence (used for routing).",
+    )
+    re_check_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of Tracker→Flanker re-check iterations completed.",
+    )
+    significant_findings: bool = Field(
+        default=False,
+        description="Whether Flanker produced significant new findings warranting re-check.",
+    )
+    review_decision: str | None = Field(
+        default=None,
+        description="Analyst review decision: approved, escalate, close_benign, continue.",
+    )
+    verdict_decision: str | None = Field(
+        default=None,
+        description="Closer verdict: benign, suspicious, malicious, inconclusive.",
+    )
     overall_confidence: Confidence | None = Field(
         default=None,
         description="Closer-assessed overall confidence (set at verdict time).",
+    )
+    review_started_at: datetime | None = Field(
+        default=None,
+        description="UTC timestamp when the case entered review status.",
     )
     version: int = Field(
         default=1,

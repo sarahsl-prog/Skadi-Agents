@@ -1,0 +1,39 @@
+{
+  "name": "hypothesis_dedup",
+  "description": "Multiple similar hypotheses should be deduplicated by cosine similarity before branching.",
+  "seed": {
+    "type": "alert",
+    "raw_payload": {
+      "entities": [
+        {"type": "ip", "value": "10.0.0.99"}
+      ],
+      "source": "ids"
+    },
+    "metadata": {"severity": "high", "confidence": 0.75}
+  },
+  "expected_hypotheses": [
+    {
+      "description": "Lateral movement detected from compromised host 10.0.0.99",
+      "confidence": 3
+    }
+  ],
+  "expected_confidence": 3,
+  "telemetry": [
+    {
+      "source": "firewall",
+      "events": [
+        {"src_ip": "10.0.0.99", "dst_ip": "10.0.0.10", "action": "ALLOW", "port": 445},
+        {"src_ip": "10.0.0.99", "dst_ip": "10.0.0.11", "action": "ALLOW", "port": 445}
+      ]
+    }
+  ],
+  "expected_evidence": [
+    {"source_type": "firewall", "source_id": "smb-lateral"}
+  ],
+  "similar_hypotheses": [
+    "Lateral movement detected from compromised host 10.0.0.99",
+    "Compromised host 10.0.0.99 is moving laterally",
+    "Lateral movement from host 10.0.0.99 detected"
+  ],
+  "dedup_threshold": 0.85
+}

@@ -1,0 +1,46 @@
+{
+  "name": "branch_budget",
+  "description": "High-entropy alert that would spawn many branches; budget should cap creation.",
+  "seed": {
+    "type": "alert",
+    "raw_payload": {
+      "entities": [
+        {"type": "ip", "value": "10.0.0.5"},
+        {"type": "domain", "value": "evil-c2.example"},
+        {"type": "host", "value": "WORKSTATION-17"}
+      ],
+      "source": "siem"
+    },
+    "metadata": {"severity": "critical", "confidence": 0.95}
+  },
+  "expected_hypotheses": [
+    {
+      "description": "Multi-entity alert suggests coordinated compromise",
+      "confidence": 4
+    },
+    {
+      "description": "DNS pivot to evil-c2.example from WORKSTATION-17",
+      "confidence": 3
+    }
+  ],
+  "expected_confidence": 4,
+  "telemetry": [
+    {
+      "source": "dns",
+      "events": [
+        {"query": "evil-c2.example", "resolved_ips": ["198.51.100.10"], "client": "10.0.0.5"}
+      ]
+    },
+    {
+      "source": "syslog",
+      "events": [
+        {"host": "WORKSTATION-17", "message": "Unexpected PowerShell execution"}
+      ]
+    }
+  ],
+  "expected_evidence": [
+    {"source_type": "dns", "source_id": "c2-resolution"},
+    {"source_type": "syslog", "source_id": "powershell-exec"}
+  ],
+  "max_expected_branches": 5
+}

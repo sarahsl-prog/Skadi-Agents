@@ -1,0 +1,45 @@
+{
+  "name": "lateral_movement",
+  "description": "Internal host scanning and SMB connections suggest lateral movement.",
+  "seed": {
+    "type": "alert",
+    "raw_payload": {
+      "entities": [
+        {"type": "ip", "value": "10.0.0.25"},
+        {"type": "host", "value": "FILESERVER-03"}
+      ],
+      "source": "ids"
+    },
+    "metadata": {"severity": "high", "confidence": 0.85}
+  },
+  "expected_hypotheses": [
+    {
+      "description": "10.0.0.25 is performing reconnaissance against FILESERVER-03",
+      "confidence": 4
+    },
+    {
+      "description": "Possible lateral movement via SMB from compromised internal host",
+      "confidence": 3
+    }
+  ],
+  "expected_confidence": 4,
+  "telemetry": [
+    {
+      "source": "firewall",
+      "events": [
+        {"src_ip": "10.0.0.25", "dst_ip": "10.0.0.50", "action": "ALLOW", "port": 445},
+        {"src_ip": "10.0.0.25", "dst_ip": "10.0.0.51", "action": "ALLOW", "port": 445}
+      ]
+    },
+    {
+      "source": "syslog",
+      "events": [
+        {"host": "FILESERVER-03", "message": "Multiple failed SMB auth attempts from 10.0.0.25"}
+      ]
+    }
+  ],
+  "expected_evidence": [
+    {"source_type": "firewall", "source_id": "smb-lateral"},
+    {"source_type": "syslog", "source_id": "failed-auth"}
+  ]
+}

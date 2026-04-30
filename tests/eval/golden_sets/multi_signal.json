@@ -1,0 +1,51 @@
+{
+  "name": "multi_signal",
+  "description": "Multiple independent signals corroborate compromise: EDR + firewall + Okta.",
+  "seed": {
+    "type": "alert",
+    "raw_payload": {
+      "entities": [
+        {"type": "host", "value": "WORKSTATION-01"},
+        {"type": "user", "value": "alice@corp.com"}
+      ],
+      "source": "siem"
+    },
+    "metadata": {"severity": "critical", "confidence": 0.95}
+  },
+  "expected_hypotheses": [
+    {
+      "description": "WORKSTATION-01 is compromised with multi-source corroboration",
+      "confidence": 5
+    },
+    {
+      "description": "alice@corp.com account may be compromised or used for lateral movement",
+      "confidence": 4
+    }
+  ],
+  "expected_confidence": 5,
+  "telemetry": [
+    {
+      "source": "crowdstrike",
+      "events": [
+        {"detect_id": "det-001", "severity": "high", "description": "Suspicious PowerShell execution"}
+      ]
+    },
+    {
+      "source": "firewall",
+      "events": [
+        {"src_ip": "10.0.0.15", "dst_ip": "192.0.2.50", "action": "BLOCK", "port": 4444}
+      ]
+    },
+    {
+      "source": "okta",
+      "events": [
+        {"event_type": "user.session.start", "actor": "alice@corp.com", "client_ip": "203.0.113.5"}
+      ]
+    }
+  ],
+  "expected_evidence": [
+    {"source_type": "crowdstrike", "source_id": "det-001"},
+    {"source_type": "firewall", "source_id": "block-4444"},
+    {"source_type": "okta", "source_id": "anomalous-login"}
+  ]
+}

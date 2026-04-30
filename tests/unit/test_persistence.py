@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -21,15 +22,15 @@ from wolfpack.schemas.seed import Seed
 
 
 @pytest.fixture()
-def mock_pool() -> PersistencePool:
+def mock_pool() -> Any:
     pool = MagicMock(spec=PersistencePool)
     pool.acquire = AsyncMock()
     pool.release = AsyncMock()
-    return pool  # type: ignore[return-value]
+    return pool
 
 
 @pytest.fixture()
-def persistence(mock_pool: PersistencePool) -> CasePersistence:
+def persistence(mock_pool: Any) -> CasePersistence:
     return CasePersistence(mock_pool)
 
 
@@ -41,7 +42,7 @@ class TestPersistencePool:
 
 class TestCasePersistence:
     async def test_create_case(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -56,7 +57,7 @@ class TestCasePersistence:
         mock_pool.release.assert_called_once_with(mock_conn)
 
     async def test_get_case_found(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -76,7 +77,7 @@ class TestCasePersistence:
         assert result.status == "new"
 
     async def test_get_case_not_found(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -86,7 +87,7 @@ class TestCasePersistence:
         assert result is None
 
     async def test_update_case_success(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -96,7 +97,7 @@ class TestCasePersistence:
         assert new_version == 2
 
     async def test_update_case_conflict(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -106,7 +107,7 @@ class TestCasePersistence:
             await persistence.update_case("case-1", "scented", expected_version=1)
 
     async def test_create_branch(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -124,7 +125,7 @@ class TestCasePersistence:
         mock_conn.execute.assert_awaited_once()
 
     async def test_update_branch_success(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -134,7 +135,7 @@ class TestCasePersistence:
         assert new_version == 3
 
     async def test_create_hypothesis(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
@@ -146,7 +147,7 @@ class TestCasePersistence:
         mock_conn.execute.assert_awaited_once()
 
     async def test_list_hypotheses(
-        self, persistence: CasePersistence, mock_pool: PersistencePool
+        self, persistence: CasePersistence, mock_pool: Any
     ) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn

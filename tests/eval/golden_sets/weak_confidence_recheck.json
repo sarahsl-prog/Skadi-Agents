@@ -1,0 +1,34 @@
+{
+  "name": "weak_confidence_recheck",
+  "description": "Low-confidence tracker output triggers Flanker re-check loop before closure.",
+  "seed": {
+    "type": "alert",
+    "raw_payload": {
+      "entities": [
+        {"type": "ip", "value": "192.0.2.100"}
+      ],
+      "source": "ids"
+    },
+    "metadata": {"severity": "medium", "confidence": 0.4}
+  },
+  "expected_hypotheses": [
+    {
+      "description": "Suspicious outbound connection from 192.0.2.100 requires re-check",
+      "confidence": 2
+    }
+  ],
+  "expected_confidence": 2,
+  "telemetry": [
+    {
+      "source": "firewall",
+      "events": [
+        {"src_ip": "192.0.2.100", "dst_ip": "198.51.100.5", "action": "ALLOW", "port": 443}
+      ]
+    }
+  ],
+  "expected_evidence": [
+    {"source_type": "firewall", "source_id": "outbound-443"}
+  ],
+  "expected_re_check_count": 1,
+  "expected_significant_findings": false
+}
