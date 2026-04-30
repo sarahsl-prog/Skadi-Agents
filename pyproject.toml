@@ -15,6 +15,7 @@ authors = [
 dependencies = [
   "asyncpg>=0.30.0",
   "cryptography>=42.0.0",
+  "fastapi>=0.115.0",
   "haystack-ai>=2.14.0",
   "httpx>=0.28.1",
   "langgraph>=0.6.7",
@@ -30,6 +31,7 @@ dependencies = [
   "pydantic-ai>=1.0.15",
   "pydantic-settings>=2.11.0",
   "typer>=0.19.2",
+  "uvicorn>=0.34.0",
 ]
 
 [project.optional-dependencies]
