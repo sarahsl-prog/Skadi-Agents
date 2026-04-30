@@ -42,6 +42,7 @@ presidio = [
 
 [project.scripts]
 wolfpack-smoke = "wolfpack.smoke.hello_pack:app"
+wolfpack-api = "wolfpack.api.app:create_app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/wolfpack"]

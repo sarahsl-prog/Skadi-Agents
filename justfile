@@ -33,6 +33,10 @@ down:
 smoke:
     uv run python -m wolfpack.smoke.hello_pack
 
+# Start the Analyst Console API server.
+api:
+    uv run uvicorn wolfpack.api.app:create_app --factory --host 0.0.0.0 --port 8000 --reload
+
 # Alembic migrations
 migrate:
     uv run alembic upgrade head
