@@ -239,13 +239,13 @@ async def run_flanker(
     # Sanitize entity values and hypothesis text before embedding in the prompt
     entity_reprs = []
     for e in flanker_input.entities:
-        val = str(e.value).replace("\n", " ").replace("<", "<").replace(">", ">")[:500]
+        val = str(e.value).replace("\n", " ")[:500]
         entity_reprs.append(f"{e.type}={val}")
     entity_str = ", ".join(entity_reprs)
 
     hyp_reprs = []
     for h in flanker_input.hypotheses or []:
-        desc = str(h.description).replace("\n", " ").replace("<", "<").replace(">", ">")[:1000]
+        desc = str(h.description).replace("\n", " ")[:1000]
         hyp_reprs.append(desc)
     hyp_str = "; ".join(hyp_reprs) if hyp_reprs else "None"
 
