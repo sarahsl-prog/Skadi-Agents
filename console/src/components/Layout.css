@@ -1,0 +1,42 @@
+.app {
+  display: flex;
+  height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.sidebar {
+  width: 220px;
+  background: #0f172a;
+  color: #fff;
+  padding: 1rem;
+}
+
+.brand h1 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav a {
+  color: #e2e8f0;
+  text-decoration: none;
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+
+.nav a:hover {
+  background: #1e293b;
+}
+
+.main {
+  flex: 1;
+  overflow: auto;
+  padding: 1.5rem;
+  background: #f8fafc;
+}
