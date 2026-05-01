@@ -12,6 +12,9 @@ from wolfpack.schemas.agents.scribe import ScribeInput, ScribeOutput
 from wolfpack.schemas.ledger import insert_ledger_entry
 from wolfpack.schemas.persistence import PersistencePool
 
+# Scribe has no external tool exposure; it only writes to the ledger.
+SCRIBE_TOOL_ALLOWLIST: frozenset[str] = frozenset()
+
 
 class ScribeInterface:
     """Async facade for writing to the evidence ledger and timeline."""

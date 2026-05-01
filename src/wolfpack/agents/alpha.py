@@ -28,6 +28,10 @@ class AlphaDeps:
         self.pool = pool
 
 
+# Alpha only needs case-creation and routing tools.
+ALPHA_TOOL_ALLOWLIST: frozenset[str] = frozenset({"create_case"})
+
+
 class AlphaDispatcher:
     """Pydantic AI agent that turns a raw seed into a hunt case.
 
