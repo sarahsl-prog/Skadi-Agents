@@ -38,6 +38,7 @@ V1.5 adds a **Blocker** (containment recommendations) and a **Post-Hunt Analyst*
 - **Python 3.11** (exact version enforced)
 - **uv** — [install](https://docs.astral.sh/uv/getting-started/installation/)
 - **Docker** — for the local infrastructure stack
+- **Node.js 20+** — for the Analyst Console frontend
 - **(Optional) NVIDIA GPU** — for Ollama inference; CPU-only works for the smoke test with `llama3.2:1b`
 
 ### Setup
@@ -89,7 +90,22 @@ just lint                # Lint code (ruff)
 just typecheck           # Type-check (mypy strict)
 just test                # Run unit tests
 just test-integration    # Run integration tests (requires Docker)
+just api                 # Start the Analyst Console API server
 ```
+
+### Analyst Console
+
+```sh
+# Start the FastAPI backend
+just api
+
+# In a second terminal, start the React frontend
+cd console
+npm install
+npm run dev
+```
+
+The Analyst Console is available at `http://localhost:3000` and proxies API calls to the FastAPI backend at `http://localhost:8000`.
 
 ### Docker Compose profiles
 
@@ -121,7 +137,16 @@ See [`infra/sizing.md`](infra/sizing.md) for hardware recommendations (enterpris
 
 ## Status
 
-Phase 0 complete. The repository scaffold, config/LLM abstractions, Docker infrastructure, observability wiring, smoke-test CLI, and CI pipeline are in place. See the project plan for remaining phases.
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 0 | Complete | Repo scaffold, config/LLM abstractions, Docker infrastructure, observability, smoke-test CLI, CI |
+| 1 | Complete | Pydantic schemas, Postgres schema, hash-chained ledger, crypto-shredding, PII store |
+| 2 | Complete | LangGraph graph, deterministic stubs, NATS integration, review timeout, Alpha Dispatcher, Scribe |
+| 3 | Complete | Tracker agent, Haystack RAG, Tier-1 adapters, PII pipeline, evaluation harness |
+| 4 | Complete | Flanker agent, Tier-2 adapters, branching, budget controls, hypothesis dedup, re-check loop |
+| 5 | In Progress | Closer agent, Analyst Console (React + FastAPI), break-glass UI, policy guardrails, verdict packet |
+
+See the project plan for remaining phases.
 
 ## License
 

@@ -81,9 +81,18 @@ def stub_closer(state: CaseState) -> dict[str, Any]:
     can transition to *review*.
     """
     return {
-        "verdict_decision": "benign",
+        "verdict_decision": "BENIGN",
         "overall_confidence": Confidence.PLAUSIBLE,
         "status": "review",
+        "verdict_packet": {
+            "decision": "BENIGN",
+            "confidence": Confidence.PLAUSIBLE,
+            "next_best_action": "Close case as benign.",
+            "evidence_refs": [],
+            "reasoning_summary": "Stub verdict — no suspicious activity detected.",
+            "branch_summaries": [],
+            "policy_applicable": [],
+        },
     }
 
 
