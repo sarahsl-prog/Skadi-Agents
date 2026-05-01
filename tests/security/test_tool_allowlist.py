@@ -6,8 +6,6 @@ allowlist and that unauthorized attempts are rejected.
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from wolfpack.agents.closer import CLOSER_TOOL_ALLOWLIST

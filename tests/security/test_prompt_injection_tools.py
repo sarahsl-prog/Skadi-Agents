@@ -6,12 +6,7 @@ they reach agent context.
 
 from __future__ import annotations
 
-import pytest
-
 from wolfpack.processing.ner import strip_pii
-from wolfpack.schemas.entity import Entity
-from wolfpack.schemas.evidence import EvidenceRef
-
 
 # ------------------------------------------------------------------ #
 # Adapter output sanitization helpers

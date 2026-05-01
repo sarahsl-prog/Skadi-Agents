@@ -5,13 +5,9 @@ Verifies that no secrets are leaked in prompts, logs, tool outputs, or OTel span
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-import pytest
-
 from wolfpack.config.settings import LLMConfig
-from wolfpack.llm.factory import get_model
 
 
 class TestAgentPromptsDoNotLeakSecrets:

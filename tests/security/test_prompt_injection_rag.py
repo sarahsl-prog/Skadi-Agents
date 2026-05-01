@@ -6,15 +6,12 @@ does not alter agent behaviour when inserted into prompts.
 
 from __future__ import annotations
 
-import pytest
-
 from wolfpack.learning.summary import format_case_summary
 from wolfpack.rag.base import RAGDocument
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.seed import Seed
 from wolfpack.schemas.verdict import VerdictPacket
-
 
 # ------------------------------------------------------------------ #
 # Sanitization / stripping helpers (placeholder until real layer lands)
