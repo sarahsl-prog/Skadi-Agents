@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "description": "WolfPack per-agent observability dashboards for MLflow.",
+  "dashboards": [
+    {
+      "title": "Per-Agent Latency",
+      "description": "P50 / P95 / P99 latency per agent (Alpha, Tracker, Flanker, Closer, Scribe)",
+      "tags": ["latency", "agents"],
+      "panels": [
+        {
+          "name": "Alpha P50 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P50"},
+          "filter": {"trace_filter": {"span_name": "node.alpha_dispatcher"}}
+        },
+        {
+          "name": "Tracker P50 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P50"},
+          "filter": {"trace_filter": {"span_name": "node.tracker"}}
+        },
+        {
+          "name": "Flanker P50 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P50"},
+          "filter": {"trace_filter": {"span_name": "node.flanker"}}
+        },
+        {
+          "name": "Closer P50 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P50"},
+          "filter": {"trace_filter": {"span_name": "node.closer"}}
+        },
+        {
+          "name": "Alpha P95 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P95"},
+          "filter": {"trace_filter": {"span_name": "node.alpha_dispatcher"}}
+        },
+        {
+          "name": "Tracker P95 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P95"},
+          "filter": {"trace_filter": {"span_name": "node.tracker"}}
+        },
+        {
+          "name": "Flanker P95 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P95"},
+          "filter": {"trace_filter": {"span_name": "node.flanker"}}
+        },
+        {
+          "name": "Closer P95 Latency",
+          "type": "scalar",
+          "metric": {"key": "latency_ms", "aggregate": "P95"},
+          "filter": {"trace_filter": {"span_name": "node.closer"}}
+        }
+      ]
+    },
+    {
+      "title": "Tool Call Counts",
+      "description": "Number of tool invocations per agent per case",
+      "tags": ["tools", "agents"],
+      "panels": [
+        {
+          "name": "Tracker Tool Calls",
+          "type": "scalar",
+          "metric": {"key": "tool.call", "aggregate": "count"},
+          "filter": {"trace_filter": {"span_name": "agent.run.tracker"}}
+        },
+        {
+          "name": "Flanker Tool Calls",
+          "type": "scalar",
+          "metric": {"key": "tool.call", "aggregate": "count"},
+          "filter": {"trace_filter": {"span_name": "agent.run.flanker"}}
+        },
+        {
+          "name": "Closer Tool Calls",
+          "type": "scalar",
+          "metric": {"key": "tool.call", "aggregate": "count"},
+          "filter": {"trace_filter": {"span_name": "agent.run.closer"}}
+        },
+        {
+          "name": "Tool Calls per Case",
+          "type": "line",
+          "metric": {"key": "tool.call", "aggregate": "count"},
+          "group_by": "wolfpack.case_id"
+        }
+      ]
+    },
+    {
+      "title": "Schema Retry Rate",
+      "description": "Percentage of schema validation retries over 5-min windows",
+      "tags": ["retries", "reliability"],
+      "panels": [
+        {
+          "name": "Retry Rate %",
+          "type": "line",
+          "metric": {"key": "schema_retry_rate", "aggregate": "mean"},
+          "filter": {"trace_filter": {"span_name": "agent.run.*"}}
+        }
+      ]
+    },
+    {
+      "title": "Evaluation Scores",
+      "description": "Golden-set evaluation metrics over time",
+      "tags": ["eval", "quality"],
+      "panels": [
+        {
+          "name": "Mean Eval Score",
+          "type": "line",
+          "metric": {"key": "eval.score", "aggregate": "mean"}
+        },
+        {
+          "name": "Precision",
+          "type": "line",
+          "metric": {"key": "eval.precision", "aggregate": "mean"}
+        },
+        {
+          "name": "Recall",
+          "type": "line",
+          "metric": {"key": "eval.recall", "aggregate": "mean"}
+        }
+      ]
+    },
+    {
+      "title": "Per-Branch Token Spend",
+      "description": "Prompt + completion tokens consumed per branch",
+      "tags": ["tokens", "cost", "branches"],
+      "panels": [
+        {
+          "name": "Tokens per Branch",
+          "type": "bar",
+          "metric": {"key": "wolfpack.token_count", "aggregate": "sum"},
+          "group_by": "wolfpack.branch_id"
+        }
+      ]
+    },
+    {
+      "title": "Case Throughput",
+      "description": "Cases completed per hour",
+      "tags": ["throughput", "cases"],
+      "panels": [
+        {
+          "name": "Cases / Hour",
+          "type": "line",
+          "metric": {"key": "case.completed", "aggregate": "rate"},
+          "time_window": "1h"
+        }
+      ]
+    }
+  ]
+}

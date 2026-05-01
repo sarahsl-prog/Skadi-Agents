@@ -13,6 +13,7 @@ from pydantic_ai import Agent
 from wolfpack.adapters.tools import AdapterDeps
 from wolfpack.agents.policy import PolicyEngine
 from wolfpack.llm.factory import get_model
+from wolfpack.observability.agents import traced_agent_run
 from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
 from wolfpack.schemas.agents.closer import CloserInput, CloserOutput
 from wolfpack.schemas.case_state import CaseState
@@ -185,7 +186,12 @@ async def run_closer(
         f"Return structured JSON matching CloserOutput."
     )
 
-    result = await agent.run(prompt, deps=deps)
+    result = await traced_agent_run(
+        "closer",
+        agent,
+        prompt,
+        deps=deps,
+    )
     output = result.output
 
     # Build branch summaries

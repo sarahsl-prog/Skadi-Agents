@@ -14,6 +14,7 @@ from typing import Any
 from pydantic_ai import Agent, RunContext
 
 from wolfpack.llm.factory import get_model
+from wolfpack.observability.agents import traced_agent_run
 from wolfpack.schemas.agents.alpha import AlphaOutput
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.persistence import CasePersistence, PersistencePool
@@ -74,7 +75,9 @@ class AlphaDispatcher:
     ) -> AlphaOutput:
         """Run Alpha on a seed and return the normalised output."""
         deps = AlphaDeps(pool=pool)
-        result = await self._agent.run(
+        result = await traced_agent_run(
+            "alpha",
+            self._agent,
             f"Normalise this hunt seed into a CaseState: {seed.model_dump_json()}",
             deps=deps,  # type: ignore[call-overload]
         )

@@ -95,6 +95,21 @@ services:
         limits:
           memory: 512M
 
+  # ── Jaeger (disabled-by-default) ────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    profiles: ["tracing"]
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4319:4317"     # OTLP gRPC (host→container; avoids conflict with otel-collector)
+      - "4320:4318"     # OTLP HTTP (host→container; avoids conflict with otel-collector)
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
   # ── Ollama ──────────────────────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest

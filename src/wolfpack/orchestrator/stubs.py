@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from wolfpack.observability.baggage import generate_agent_run_id, set_case_baggage
 from wolfpack.schemas.branch import BranchSpec
 from wolfpack.schemas.case_state import BranchState, CaseState
 from wolfpack.schemas.confidence import Confidence
@@ -24,9 +25,17 @@ def stub_alpha(state: CaseState) -> dict[str, Any]:
     Returns a dict that updates ``state`` with:
     - ``status="scented"``
     - a single root branch
+
+    Sets OTel baggage so downstream nodes carry the full operational context.
     """
+    branch_id = str(uuid.uuid4())
+    set_case_baggage(
+        case_id=state.case_id,
+        branch_id=branch_id,
+        agent_run_id=generate_agent_run_id(),
+    )
     root_branch = BranchState(
-        branch_id=str(uuid.uuid4()),
+        branch_id=branch_id,
         case_id=state.case_id,
         spec=BranchSpec(
             hypothesis=Hypothesis(
