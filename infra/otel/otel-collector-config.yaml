@@ -1,7 +1,7 @@
 # WolfPack OpenTelemetry Collector configuration.
 # Accepts OTLP over HTTP (4318) and gRPC (4317).
 # Exports to the debug console by default.
-# MLflow exporter can be enabled when the bridge matures (see Playbook risk note).
+# MLflow and Jaeger exporters can be enabled via environment variables.
 
 receivers:
   otlp:
@@ -15,19 +15,38 @@ processors:
   batch:
     timeout: 5s
     send_batch_size: 512
+    send_batch_max_size: 1024
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
 
 exporters:
   # Primary proof point during Phase 0 — log spans to stdout.
   debug:
     verbosity: detailed
 
-  # Placeholder for MLflow / Prometheus / Jaeger exporters in later phases.
-  # otlp/mlflow:
-  #   endpoint: http://mlflow:5000/api/2.0/mlflow/traces
+  # MLflow OTLP ingestion (Phase 6). Enable when MLflow trace bridge matures.
+  otlp/mlflow:
+    endpoint: ${WOLFPACK_MLFLOW_OTEL_ENDPOINT:-http://mlflow:5000/api/2.0/mlflow/traces}
+    retries:
+      enabled: true
+      max_elapsed_time: 30s
+
+  # Jaeger OTLP exporter (Phase 6). Disabled-by-default via compose profile.
+  otlp/jaeger:
+    endpoint: ${WOLFPACK_JAEGER_OTEL_ENDPOINT:-http://jaeger:4317}
+    tls:
+      insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [debug]
+      processors: [memory_limiter, batch]
+      exporters:
+        - debug
+        # Enable MLflow / Jaeger by uncommenting or setting env vars:
+        # - otlp/mlflow
+        # - otlp/jaeger

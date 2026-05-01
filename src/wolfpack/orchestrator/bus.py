@@ -3,6 +3,10 @@
 The :class:`NATSClient` manages connection lifecycle, stream creation,
 publish with ack confirmation, and durable consumer subscription with
 manual ack/redelivery.
+
+OpenTelemetry trace context and baggage are automatically propagated
+through NATS message headers so that distributed traces span across
+the event bus.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig
 
 from wolfpack.config.settings import NATSConfig
+from wolfpack.observability.nats_propagation import extract_nats_headers, inject_nats_headers
 
 
 class NATSClient:
@@ -62,13 +67,21 @@ class NATSClient:
                 pass
 
     async def publish(
-        self, subject: str, payload: bytes | str | dict[str, Any]
+        self,
+        subject: str,
+        payload: bytes | str | dict[str, Any],
+        *,
+        headers: dict[str, str] | None = None,
     ) -> Any:
         """Publish a message to *subject* and return the server ack.
+
+        OTel trace context and baggage are automatically injected into
+        NATS headers unless *headers* already contains OTel keys.
 
         Args:
             subject: NATS subject (e.g. ``hunt.finding.tracker``).
             payload: Message body - bytes, string, or dict (JSON-encoded).
+            headers: Optional NATS message headers (merged with OTel).
 
         Raises:
             RuntimeError: If the client is not connected.
@@ -80,7 +93,14 @@ class NATSClient:
             payload = json.dumps(payload).encode()
         elif isinstance(payload, str):
             payload = payload.encode()
-        return await self._js.publish(subject, payload)
+
+        merged_headers = inject_nats_headers()
+        if headers:
+            merged_headers.update(headers)
+
+        return await self._js.publish(
+            subject, payload, headers=merged_headers
+        )
 
     async def subscribe(
         self,
@@ -95,6 +115,9 @@ class NATSClient:
         The consumer uses manual ack so that unacknowledged messages are
         redelivered.  ``max_ack_pending`` provides back-pressure.
 
+        OTel trace context and baggage are restored from NATS headers
+        before invoking *handler*.
+
         Args:
             subject: NATS subject to subscribe to.
             durable: Durable consumer name (e.g. ``tracker-consumer``).
@@ -105,10 +128,14 @@ class NATSClient:
         if self._js is None:
             raise RuntimeError("NATSClient not connected - call connect() first")
 
+        def _wrapped_handler(msg: Msg) -> Any:
+            extract_nats_headers(dict(msg.headers) if msg.headers else None)
+            return handler(msg)
+
         return await self._js.subscribe(
             subject,
             durable=durable,
-            cb=handler,
+            cb=_wrapped_handler,
             manual_ack=True,
             config=ConsumerConfig(max_ack_pending=max_ack_pending),
         )

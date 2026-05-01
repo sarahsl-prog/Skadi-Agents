@@ -16,6 +16,7 @@ from pydantic_ai import Agent
 from wolfpack.adapters.base import TimeWindow
 from wolfpack.adapters.tools import AdapterDeps
 from wolfpack.llm.factory import get_model
+from wolfpack.observability.agents import traced_agent_run
 from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.confidence import Confidence
@@ -201,7 +202,9 @@ async def run_tracker(
     )
 
     agent = _build_tracker_agent(model=model)
-    result = await agent.run(
+    result = await traced_agent_run(
+        "tracker",
+        agent,
         f"Investigate case {tracker_input.case_id}. Entities: {tracker_input.entities}",
         deps=deps,
     )

@@ -78,6 +78,13 @@ class BranchBudgetConfig(BaseModel):
     # count are enforced in V1.
 
 
+class WebhookConfig(BaseModel):
+    """Webhook target for alert and timeout escalation notifications."""
+
+    url: str | None = None
+    timeout_s: float = 30.0
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -94,6 +101,14 @@ class Settings(BaseSettings):
     mlflow: MLflowConfig = Field(default_factory=MLflowConfig)
     branch_budget: BranchBudgetConfig = Field(default_factory=BranchBudgetConfig)
     feature_flags: dict[str, bool] = Field(default_factory=dict)
+    webhook_config: WebhookConfig = Field(default_factory=WebhookConfig)
+
+    @field_validator("webhook_config", mode="before")
+    @classmethod
+    def _parse_webhook(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return {"url": v}
+        return v
 
     @field_validator("feature_flags", mode="before")
     @classmethod

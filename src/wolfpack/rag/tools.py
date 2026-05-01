@@ -12,6 +12,7 @@ import re
 from pydantic import BaseModel, Field
 from pydantic_ai import RunContext
 
+from wolfpack.observability.rag_tools import traced_retrieve
 from wolfpack.rag.base import RAGDocument
 from wolfpack.rag.case_history import CaseHistoryPipeline
 from wolfpack.rag.threat_intel import ThreatIntelPipeline
@@ -112,7 +113,7 @@ async def threat_intel_tool(
     pipeline = ctx.deps.threat_intel
     if pipeline is None:
         return RAGResult(source="threat_intel", answer="")
-    docs = await pipeline.retrieve(query, top_k=top_k)
+    docs = await traced_retrieve("threat_intel", pipeline.retrieve)(query, top_k=top_k)
     return RAGResult(
         source="threat_intel",
         documents=docs,
@@ -133,7 +134,7 @@ async def case_history_tool(
     pipeline = ctx.deps.case_history
     if pipeline is None:
         return RAGResult(source="case_history", answer="")
-    docs = await pipeline.retrieve(query, top_k=top_k)
+    docs = await traced_retrieve("case_history", pipeline.retrieve)(query, top_k=top_k)
     return RAGResult(
         source="case_history",
         documents=docs,

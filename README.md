@@ -144,9 +144,8 @@ See [`infra/sizing.md`](infra/sizing.md) for hardware recommendations (enterpris
 | 2 | Complete | LangGraph graph, deterministic stubs, NATS integration, review timeout, Alpha Dispatcher, Scribe |
 | 3 | Complete | Tracker agent, Haystack RAG, Tier-1 adapters, PII pipeline, evaluation harness |
 | 4 | Complete | Flanker agent, Tier-2 adapters, branching, budget controls, hypothesis dedup, re-check loop |
-| 5 | In Progress | Closer agent, Analyst Console (React + FastAPI), break-glass UI, policy guardrails, verdict packet |
-
-See the project plan for remaining phases.
+| 5 | Complete | Closer agent, Analyst Console (React + FastAPI), break-glass UI, policy guardrails, verdict packet |
+| 6 | Complete | OTel instrumentation (LangGraph nodes, Pydantic AI agents, Haystack RAG), baggage propagation, NATS context propagation, alerting layer, MLflow dashboards |
 
 ## License
 

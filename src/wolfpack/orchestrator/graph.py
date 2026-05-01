@@ -20,6 +20,7 @@ from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
+from wolfpack.observability.tracing import traced_node
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.confidence import Confidence
 
@@ -190,6 +191,14 @@ def build_hunt_graph(
 
     if alpha is None or tracker is None or flanker is None or closer is None or review is None:
         raise RuntimeError("All main agent nodes must be provided or use_stubs=True")
+
+    # Wrap every node with OTel tracing before (optionally) wiring NATS.
+    alpha = traced_node("alpha_dispatcher", alpha)
+    tracker = traced_node("tracker", tracker)
+    flanker = traced_node("flanker", flanker)
+    closer = traced_node("closer", closer)
+    review = traced_node("review", review)
+    scribe = traced_node("scribe", scribe)
 
     if nats_client is not None:
         alpha = _wrap_with_nats(alpha, "hunt.task.tracker", nats_client)

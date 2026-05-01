@@ -16,6 +16,7 @@ from pydantic_ai import Agent
 from wolfpack.adapters.base import TimeWindow
 from wolfpack.adapters.tools import AdapterDeps
 from wolfpack.llm.factory import get_model
+from wolfpack.observability.agents import traced_agent_run
 from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
 from wolfpack.schemas.agents.flanker import FlankerInput, FlankerOutput
 from wolfpack.schemas.case_state import CaseState
@@ -259,7 +260,12 @@ async def run_flanker(
         f"Follow your system rules and return structured JSON matching FlankerOutput."
     )
 
-    result = await agent.run(prompt, deps=deps)
+    result = await traced_agent_run(
+        "flanker",
+        agent,
+        prompt,
+        deps=deps,
+    )
 
     output = result.output
 
