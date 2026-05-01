@@ -85,6 +85,16 @@ class WebhookConfig(BaseModel):
     timeout_s: float = 30.0
 
 
+class LearningConfig(BaseModel):
+    """Configuration for the learning queue worker."""
+
+    schedule_minutes: int = 5
+    batch_size: int = 50
+    retry_limit: int = 3
+    min_confidence: int = 3
+    enable_worker: bool = True
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -100,6 +110,7 @@ class Settings(BaseSettings):
     otel: OTelConfig = Field(default_factory=OTelConfig)
     mlflow: MLflowConfig = Field(default_factory=MLflowConfig)
     branch_budget: BranchBudgetConfig = Field(default_factory=BranchBudgetConfig)
+    learning: LearningConfig = Field(default_factory=LearningConfig)
     feature_flags: dict[str, bool] = Field(default_factory=dict)
     webhook_config: WebhookConfig = Field(default_factory=WebhookConfig)
 

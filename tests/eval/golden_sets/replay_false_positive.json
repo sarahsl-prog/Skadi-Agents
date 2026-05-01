@@ -1,0 +1,7 @@
+{
+  "name": "false_positive_dev_powershell",
+  "query": "benign PowerShell activity developer script",
+  "expected_case_ids": ["case-fp-powershell"],
+  "category": "false_positive",
+  "top_k": 3
+}

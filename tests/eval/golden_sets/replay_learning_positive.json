@@ -1,0 +1,7 @@
+{
+  "name": "learning_positive_lateral_rdp",
+  "query": "lateral movement via RDP",
+  "expected_case_ids": ["case-lateral-rdp"],
+  "category": "learning_positive",
+  "top_k": 3
+}

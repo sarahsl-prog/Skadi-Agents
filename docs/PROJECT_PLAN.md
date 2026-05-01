@@ -239,3 +239,29 @@ All blocking design questions are resolved. The plan is ready to move into Phase
 - Integration tests require Docker and are skipped by default (`SKIP_INTEGRATION=1`); CI should run them with Docker available.
 
 **Next phase:** Phase 1 — Contracts & case state (schemas, Postgres schema, hash-chained ledger, crypto-shredding architecture).
+
+---
+
+## Phase 8 — V1 Release Readiness
+
+**Planned duration:** 1 week  
+**Actual duration:** 1 day (Tracks A–C: 2026-05-01 morning; Tracks D–E: 2026-05-01 afternoon)
+
+**What landed:**
+- **Track A:** Threat model (`docs/security/threat_model.md`), red-team prompt-injection tests (RAG + tools), tool-allowlist enforcement tests.
+- **Track B:** Crypto-shredding dry-run (`tests/security/test_crypto_shredding.py`), break-glass audit review (`tests/security/test_breakglass_audit.py`).
+- **Track C:** Secret-handling audit tests (`tests/security/test_secret_handling.py`), secret audit report (`docs/security/secret_audit.md`), `.gitleaks.toml` allowlist.
+- **Track D:** Deployment runbook, on-call runbook, architecture documentation, configuration reference.
+- **Track E:** Final security review (`docs/security/security_review.md`), release readiness checklist (`docs/RELEASE_READINESS.md`), performance baseline document, README + PROJECT_PLAN updates.
+
+**Deviations from plan:**
+- Live performance benchmark deferred to post-deployment because reference GPU hardware (H100/H200) is not available in the CI/dev environment.
+- MLflow dashboard validation with live data deferred to first production deployment.
+- Airgapped-mode end-to-end testing deferred; config validation is unit-tested via mocked `Settings`.
+
+**Unresolved risks carried forward:**
+- Performance baseline is documented but not measured live.
+- MLflow/Jaeger exporter validation requires a running stack with real load.
+- V1.5 trigger metrics (Blocker / Post-Hunt Analyst thresholds) remain deferred per original plan.
+
+**Next phase:** V1.5 planning — Blocker agent, Post-Hunt Analyst, token/tool budgets per branch, Jaeger default-on.

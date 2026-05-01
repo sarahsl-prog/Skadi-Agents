@@ -45,6 +45,24 @@ class CaseHistoryPipeline(RAGPipeline):
     async def index(self, documents: list[RAGDocument]) -> None:
         await self._store.write_documents(documents)
 
+    async def ingest_case_summary(self, summary: Any) -> None:
+        """Index a structured case summary into case-history RAG.
+
+        The *narrative* field is used for semantic search, while remaining
+        fields become filterable metadata.  Duplicate ``case_id`` entries
+        update the existing record (upsert).
+        """
+        from wolfpack.learning.summary import CaseSummary
+
+        if not isinstance(summary, CaseSummary):
+            summary = CaseSummary.model_validate(summary)
+        doc = RAGDocument(
+            id=summary.case_id,
+            content=summary.narrative,
+            metadata=summary.to_rag_document()["metadata"],
+        )
+        await self._store.write_documents([doc])
+
     async def retrieve(
         self,
         query: str,

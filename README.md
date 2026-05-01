@@ -146,6 +146,22 @@ See [`infra/sizing.md`](infra/sizing.md) for hardware recommendations (enterpris
 | 4 | Complete | Flanker agent, Tier-2 adapters, branching, budget controls, hypothesis dedup, re-check loop |
 | 5 | Complete | Closer agent, Analyst Console (React + FastAPI), break-glass UI, policy guardrails, verdict packet |
 | 6 | Complete | OTel instrumentation (LangGraph nodes, Pydantic AI agents, Haystack RAG), baggage propagation, NATS context propagation, alerting layer, MLflow dashboards |
+| 7 | Complete | Learning loop (approve → ingest → improved retrieval), replay evaluation, eval harness |
+| 8 | Complete | Threat model, red-team tests (prompt injection RAG/tools, allowlist), crypto-shredding dry-run, break-glass audit, secret-handling audit, runbooks, security review, release readiness checklist |
+
+## Security
+
+- [Threat model](docs/security/threat_model.md) — attack surface, mitigations, residual risks
+- [Secret-handling audit](docs/security/secret_audit.md) — no secrets in prompts, logs, or spans
+- [Security review](docs/security/security_review.md) — final V1 sign-off summary
+- [Release readiness](docs/RELEASE_READINESS.md) — checklist and deferred items
+
+## Runbooks
+
+- [Deployment](docs/runbook/deployment.md) — prerequisites, step-by-step, scaling, backup
+- [On-call](docs/runbook/oncall.md) — alert catalog, incidents, escalation, rollback
+- [Architecture](docs/runbook/architecture.md) — three rings, agent roster, hunt flow, data stores
+- [Configuration reference](docs/runbook/configuration.md) — every `Settings` field with `.env` names and defaults
 
 ## License
 
