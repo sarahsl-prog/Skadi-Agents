@@ -12,6 +12,22 @@ This document turns the Phase 7 plan from [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)
 | D4 | **Learning confidence floor** — should there be a minimum confidence threshold below which approved cases are not ingested into the case-history index? The Risks section flags this as a concern but it is not a formal decision. Options: no floor (ingest everything approved), `Confidence >= 2` (weak or above), or `Confidence >= 3` (plausible or above). | Before Track A1 (learning queue processor) | `Confidence >= 3` (plausible or above), configurable via `LearningConfig.min_confidence` | A low-confidence case approved by an analyst may still represent a high-quality learning signal (e.g., a confirmed false positive at Confidence.WEAK is still useful for future FP detection). The floor should be configurable so it can be lowered for false-positive-detection use cases. Default of 3 is conservative and safe. |
 | D5 | **Case-history index archival strategy** — as the index grows, entries older than the retention policy period may need to be pruned. Haystack's pgvector store does not have built-in TTL. Options: (a) no pruning in V1 (let it grow until retention period is reached and crypto-shredding removes PII), (b) hard delete index entries when the retention period expires, (c) archive old entries to a cold pgvector collection. | Before Track A3 (Haystack ingestion wiring) | No pruning in V1 — document as a known limitation. When crypto-shredding erases a case's DEK, add a step to remove the corresponding case-history index entries. Archival strategy to be designed in V1.5. | Pruning and archival add complexity that is not needed for the Phase 7 learning loop. The crypto-shredding integration (DEK erasure → index entry removal) is the correct hook point, but implementing it fully belongs in a post-V1 hardening pass. |
 
+## Status
+
+| Track | Status | Key files | Tests |
+|-------|--------|-----------|-------|
+| A2 | Done | `src/wolfpack/learning/summary.py` | `tests/unit/test_learning_summary.py` (13 passed) |
+| A1 | Done | `src/wolfpack/learning/worker.py` | `tests/integration/test_learning_worker.py` (4 passed) |
+| A3 | Done | `src/wolfpack/rag/case_history.py` | See integration tests |
+| A4 | Done | `src/wolfpack/config/settings.py`, `justfile` | See integration tests |
+| A5 | Done | `tests/integration/test_learning_worker.py` | 4 passed |
+| B1 | Done | `src/wolfpack/eval/replay.py` | `tests/unit/test_replay_eval.py` (8 passed) |
+| B2 | Done | `tests/eval/golden_sets/replay_*.json` | See integration tests |
+| B3 | Done | `docs/learning_eval_results.md` | See integration tests |
+| B4 | Done | `tests/integration/test_replay_eval_integration.py` | 3 passed |
+
+**All Phase 7 new tests: 28 passed.**
+
 ## 1. Current Baseline
 
 The repository has (from Phases 0–6):
