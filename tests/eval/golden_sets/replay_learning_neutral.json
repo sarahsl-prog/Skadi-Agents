@@ -1,0 +1,7 @@
+{
+  "name": "learning_neutral_dns_tunnel",
+  "query": "DNS tunneling detection",
+  "expected_case_ids": [],
+  "category": "learning_neutral",
+  "top_k": 3
+}

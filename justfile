@@ -37,6 +37,14 @@ smoke:
 api:
     uv run uvicorn wolfpack.api.app:create_app --factory --host 0.0.0.0 --port 8000 --reload
 
+# Phase 7: run the learning-queue worker (one pass)
+learning-worker:
+    uv run python -m wolfpack.learning.worker
+
+# Phase 7: run replay evaluation against case-history index
+eval-replay:
+    uv run python -m wolfpack.eval.replay
+
 # Alembic migrations
 migrate:
     uv run alembic upgrade head
