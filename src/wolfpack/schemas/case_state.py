@@ -1,6 +1,9 @@
 """Case and branch state aggregates."""
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -35,7 +38,7 @@ class BranchState(BaseModel):
     evidence_refs: list[EvidenceRef] = Field(
         default_factory=list, description="Evidence collected in this branch."
     )
-    status: str = Field(
+    status: Literal["open", "closed", "merged", "abandoned"] = Field(
         default="open", description="Branch status: open, closed, merged, abandoned."
     )
     version: int = Field(
@@ -63,7 +66,7 @@ class CaseState(BaseModel):
 
     case_id: str = Field(..., description="Stable case identifier (UUID).")
     seed: Seed = Field(..., description="Original hunt seed.")
-    status: str = Field(
+    status: Literal["new", "scented", "shadowing", "decision", "review", "closed"] = Field(
         default="new",
         description="Case lifecycle: new, scented, shadowing, decision, review, closed.",
     )
@@ -95,13 +98,13 @@ class CaseState(BaseModel):
         default=False,
         description="Whether Flanker produced significant new findings warranting re-check.",
     )
-    review_decision: str | None = Field(
+    review_decision: Literal["approved", "escalate", "close_benign", "continue"] | None = Field(
         default=None,
         description="Analyst review decision: approved, escalate, close_benign, continue.",
     )
-    verdict_decision: str | None = Field(
+    verdict_decision: Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] | None = Field(
         default=None,
-        description="Closer verdict: benign, suspicious, malicious, inconclusive.",
+        description="Closer verdict: MALICIOUS, BENIGN, INCONCLUSIVE, NEEDS_MORE_INFO, or SUSPICIOUS.",
     )
     overall_confidence: Confidence | None = Field(
         default=None,

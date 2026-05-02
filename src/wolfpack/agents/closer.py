@@ -207,11 +207,11 @@ async def run_closer(
     ]
 
     verdict_packet = VerdictPacket(
-        decision=output.decision,  # type: ignore[arg-type]
+        decision=output.decision,
         confidence=output.confidence,
         next_best_action=output.next_best_action,
         evidence_refs=output.evidence_refs,
-        reasoning_summary=getattr(output, "reasoning_summary", ""),
+        reasoning_summary=output.reasoning_summary,
         branch_summaries=branch_summaries,
     )
 

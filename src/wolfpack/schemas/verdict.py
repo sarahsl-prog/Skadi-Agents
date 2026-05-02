@@ -23,7 +23,7 @@ class BranchSummary(BaseModel):
 class VerdictPacket(BaseModel):
     """Structured verdict emitted by the Closer agent."""
 
-    decision: Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO"] = Field(
+    decision: Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] = Field(
         ..., description="Final verdict decision."
     )
     confidence: Confidence = Field(..., description="Closer's confidence in the verdict.")

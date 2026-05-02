@@ -67,7 +67,7 @@ class TestStubHappyPath:
 
         assert result["case_id"] == case_id
         assert result["status"] == "closed"
-        assert result["verdict_decision"] == "benign"
+        assert result["verdict_decision"] == "BENIGN"
         assert result["overall_confidence"] == Confidence.PLAUSIBLE
         assert result["review_decision"] == "approved"
 
@@ -123,7 +123,7 @@ class TestStubFunctions:
         seed = Seed(type="ioc", raw_payload={})
         state = CaseState(case_id=str(uuid.uuid4()), seed=seed)
         updates = stub_closer(state)
-        assert updates["verdict_decision"] == "benign"
+        assert updates["verdict_decision"] == "BENIGN"
         assert updates["status"] == "review"
 
     def test_stub_review_auto_approves(self) -> None:
