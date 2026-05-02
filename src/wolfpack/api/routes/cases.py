@@ -4,37 +4,25 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from wolfpack.api.auth import RequireAuth
+from wolfpack.api.dependencies import get_pool
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.persistence import CasePersistence, PersistencePool
 
 router = APIRouter()
-
-_pool: PersistencePool | None = None
-
-
-def _get_pool() -> PersistencePool:
-    """Return the global persistence pool (lazy init)."""
-    global _pool  # noqa: PLW0603
-    if _pool is None:
-        from wolfpack.config.settings import Settings
-
-        settings = Settings()
-        _pool = PersistencePool(str(settings.postgres.dsn))
-    return _pool
 
 
 @router.get("/cases")
 async def list_cases(
     auth: RequireAuth,  # noqa: ARG001
     status_filter: str | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """List cases with optional status filter."""
-    pool = _get_pool()
     conn = await pool.acquire()
     try:
         where = "WHERE 1=1"
@@ -68,9 +56,9 @@ async def list_cases(
 async def get_case(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Get full case details including branches, hypotheses, and evidence."""
-    pool = _get_pool()
     persistence = CasePersistence(pool)
     case = await persistence.get_full_case(case_id)
     if case is None:
@@ -97,9 +85,9 @@ async def get_case(
 async def get_case_timeline(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Return ordered evidence ledger entries for the case."""
-    pool = _get_pool()
     conn = await pool.acquire()
     try:
         rows = await conn.fetch(
@@ -125,9 +113,9 @@ async def get_case_timeline(
 async def get_case_verdict(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Return the current verdict packet for the case (if present)."""
-    pool = _get_pool()
     conn = await pool.acquire()
     try:
         row = await conn.fetchrow(

@@ -9,27 +9,18 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from wolfpack.api.auth import RequireAuth
-from wolfpack.schemas.persistence import CasePersistence, PersistencePool
+from wolfpack.api.dependencies import get_pool
+from wolfpack.schemas.persistence import PersistencePool
 
 router = APIRouter()
 
-_pool: PersistencePool | None = None
-
-
-def _get_pool() -> PersistencePool:
-    global _pool  # noqa: PLW0603
-    if _pool is None:
-        from wolfpack.config.settings import Settings
-
-        settings = Settings()
-        _pool = PersistencePool(str(settings.postgres.dsn))
-    return _pool
-
 
 @router.get("/review/queue")
-async def review_queue(auth: RequireAuth) -> dict[str, Any]:  # noqa: ARG001
+async def review_queue(
+    auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
+) -> dict[str, Any]:
     """Return cases awaiting analyst review."""
-    pool = _get_pool()
     conn = await pool.acquire()
     try:
         rows = await conn.fetch(
@@ -52,46 +43,66 @@ async def review_queue(auth: RequireAuth) -> dict[str, Any]:  # noqa: ARG001
 
 
 async def _write_ledger_and_update(
+    conn: Any,
     case_id: str,
     new_status: str,
     entry_type: str,
     content: dict[str, Any],
 ) -> None:
-    """Write a ledger entry and update the case status optimistically."""
-    pool = _get_pool()
-    conn = await pool.acquire()
-    try:
-        await conn.execute(
-            """
-            INSERT INTO wolfpack.evidence_ledger
-            (case_id, entry_type, content, created_at)
-            VALUES ($1, $2, $3, NOW())
-            """,
-            case_id,
-            entry_type,
-            json.dumps({**content, "timestamp": datetime.now(UTC).isoformat()}),
+    """Write a ledger entry and update the case status atomically."""
+    await conn.execute(
+        """
+        INSERT INTO wolfpack.evidence_ledger
+        (case_id, entry_type, content, created_at)
+        VALUES ($1, $2, $3, NOW())
+        """,
+        case_id,
+        entry_type,
+        json.dumps({**content, "timestamp": datetime.now(UTC).isoformat()}),
+    )
+    await conn.execute(
+        "UPDATE wolfpack.cases SET status = $1, updated_at = NOW() WHERE id = $2",
+        new_status,
+        case_id,
+    )
+
+
+async def _assert_case_in_review(conn: Any, case_id: str) -> None:
+    """Raise 409 if the case is not in 'review' status."""
+    row = await conn.fetchrow(
+        "SELECT status FROM wolfpack.cases WHERE id = $1", case_id
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Case not found"
         )
-        await conn.execute(
-            "UPDATE wolfpack.cases SET status = $1, updated_at = NOW() WHERE id = $2",
-            new_status,
-            case_id,
+    if row["status"] != "review":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Case status is '{row['status']}', expected 'review'",
         )
-    finally:
-        await pool.release(conn)
 
 
 @router.post("/review/{case_id}/approve")
 async def approve_case(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Approve learning for a case (moves to learning queue)."""
-    await _write_ledger_and_update(
-        case_id,
-        "approved",
-        "review_action",
-        {"action": "approve", "review_decision": "approved"},
-    )
+    conn = await pool.acquire()
+    try:
+        await _assert_case_in_review(conn, case_id)
+        async with conn.transaction():
+            await _write_ledger_and_update(
+                conn,
+                case_id,
+                "approved",
+                "review_action",
+                {"action": "approve", "review_decision": "approved"},
+            )
+    finally:
+        await pool.release(conn)
     return {"case_id": case_id, "status": "approved"}
 
 
@@ -99,14 +110,22 @@ async def approve_case(
 async def escalate_case(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Escalate a case (re-route to Tracker/Flanker)."""
-    await _write_ledger_and_update(
-        case_id,
-        "escalation",
-        "review_action",
-        {"action": "escalate", "review_decision": "escalate"},
-    )
+    conn = await pool.acquire()
+    try:
+        await _assert_case_in_review(conn, case_id)
+        async with conn.transaction():
+            await _write_ledger_and_update(
+                conn,
+                case_id,
+                "escalation",
+                "review_action",
+                {"action": "escalate", "review_decision": "escalate"},
+            )
+    finally:
+        await pool.release(conn)
     return {"case_id": case_id, "status": "escalation"}
 
 
@@ -114,14 +133,22 @@ async def escalate_case(
 async def close_benign(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Close a case as benign."""
-    await _write_ledger_and_update(
-        case_id,
-        "closed",
-        "review_action",
-        {"action": "close_benign", "review_decision": "close_benign"},
-    )
+    conn = await pool.acquire()
+    try:
+        await _assert_case_in_review(conn, case_id)
+        async with conn.transaction():
+            await _write_ledger_and_update(
+                conn,
+                case_id,
+                "closed",
+                "review_action",
+                {"action": "close_benign", "review_decision": "close_benign"},
+            )
+    finally:
+        await pool.release(conn)
     return {"case_id": case_id, "status": "closed"}
 
 
@@ -129,12 +156,20 @@ async def close_benign(
 async def continue_hunt(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
+    pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Continue hunting (route back to Alpha Dispatcher)."""
-    await _write_ledger_and_update(
-        case_id,
-        "scented",
-        "review_action",
-        {"action": "continue_hunt", "review_decision": "continue"},
-    )
+    conn = await pool.acquire()
+    try:
+        await _assert_case_in_review(conn, case_id)
+        async with conn.transaction():
+            await _write_ledger_and_update(
+                conn,
+                case_id,
+                "scented",
+                "review_action",
+                {"action": "continue_hunt", "review_decision": "continue"},
+            )
+    finally:
+        await pool.release(conn)
     return {"case_id": case_id, "status": "scented"}
