@@ -11,6 +11,7 @@ from typing import Any
 from wolfpack.adapters.base import Event
 from wolfpack.processing.ner import NERStripper
 from wolfpack.processing.pii import PIICache
+from wolfpack.schemas.entity import Entity
 from wolfpack.schemas.ledger import insert_ledger_entry
 from wolfpack.schemas.persistence import PersistencePool
 
@@ -45,8 +46,6 @@ class PIIPipeline:
                 token = await self._cache.pseudonymize(
                     case_id, ent.value, ent.type
                 )
-                from wolfpack.schemas.entity import Entity
-
                 new_entities.append(Entity(type=ent.type, value=token))
 
             new_payload = await self._sanitize_payload(

@@ -12,6 +12,8 @@ from wolfpack.schemas.agents.scribe import ScribeInput, ScribeOutput
 from wolfpack.schemas.ledger import insert_ledger_entry
 from wolfpack.schemas.persistence import PersistencePool
 
+# Scribe is non-LLM; its allowlist is minimal (ledger/timeline only).
+SCRIBE_TOOL_ALLOWLIST: frozenset[str] = frozenset({"write_ledger_entry", "write_timeline_event"})
 
 
 class ScribeInterface:
