@@ -56,10 +56,14 @@ class LearningQueueWorker:
         schedule_minutes: int = 5,
         batch_size: int = 50,
     ) -> LearningQueueWorker:
-        """Build a worker from a raw connection pool."""
-        persistence = CasePersistence(
-            PersistencePool(dsn="", min_size=0, max_size=0)
-        )
+        """Build a worker from a raw connection pool.
+
+        The provided *pool* is used directly; no separate persistence pool
+        is created since the worker shares the caller's pool.
+        """
+        from wolfpack.schemas.persistence import CasePersistence
+
+        persistence = CasePersistence(pool=pool)
         return cls(
             pool=pool,
             pipeline=pipeline,
@@ -264,28 +268,6 @@ class LearningQueueWorker:
                     " WHERE case_id = $1 AND branch_id = $2",
                     case_id,
                     branch.branch_id,
-                )
-                # Hypotheses for branch
-                hyp_rows = await conn.fetch(
-                    "SELECT description, confidence, status"
-                    " FROM wolfpack.hypotheses WHERE branch_id = $1",
-                    branch.branch_id,
-                )
-                for h in hyp_rows:
-                    branch.hypotheses.append(
-                        Hypothesis(
-                            description=h["description"],
-                            confidence=Confidence(int(h["confidence"])),
-                            status=h["status"],
-                        )
-                    )
-                # Evidence refs for branch
-                ev_rows = await conn.fetch(
-                    "SELECT case_id, branch_id, entry_type, content,"
-                    " created_at, agent_run_id"
-                    " FROM wolfpack.evidence_ledger"
-                    " WHERE case_id = $1 AND branch_id = $2",
-                    case_id, branch.branch_id,
                 )
                 for e in ev_rows:
                     content = e["content"]

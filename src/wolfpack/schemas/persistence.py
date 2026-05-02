@@ -49,14 +49,29 @@ class PersistencePool:
 
     async def release(self, conn: asyncpg.Connection) -> None:
         if self._pool is not None:
-            await self._pool.release(conn)
+            await self._release(conn)
 
 
 class CasePersistence:
     """Async CRUD for ``CaseState`` and ``BranchState``."""
 
-    def __init__(self, pool: PersistencePool) -> None:
+    def __init__(self, pool: PersistencePool | asyncpg.Pool) -> None:
         self._pool = pool
+
+    async def _acquire(self) -> asyncpg.Connection:
+        """Acquire a connection from the underlying pool."""
+        if hasattr(self._pool, "acquire"):
+            # It's a PersistencePool with its own acquire/release
+            return await self._pool.acquire()  # type: ignore[union-attr]
+        # It's a raw asyncpg.Pool
+        return await self._pool.acquire()  # type: ignore[union-attr]
+
+    async def _release(self, conn: asyncpg.Connection) -> None:
+        """Release a connection back to the underlying pool."""
+        if hasattr(self._pool, "release"):
+            await self._release(conn)  # type: ignore[union-attr]
+        else:
+            await self._release(conn)  # type: ignore[union-attr]
 
     # ------------------------------------------------------------------ #
     # Cases
@@ -64,7 +79,7 @@ class CasePersistence:
 
     async def create_case(self, case: CaseState) -> None:
         """Insert a new case row."""
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             await conn.execute(
                 """
@@ -79,11 +94,11 @@ class CasePersistence:
                 case.updated_at,
             )
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     async def get_case(self, case_id: str) -> CaseState | None:
         """Fetch a case by ID (without branches)."""
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             row = await conn.fetchrow(
                 "SELECT id, seed, status, version, created_at, updated_at "
@@ -104,7 +119,7 @@ class CasePersistence:
                 updated_at=row["updated_at"],
             )
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     async def update_case(
         self, case_id: str, status: str, expected_version: int
@@ -114,7 +129,7 @@ class CasePersistence:
         Returns the new version on success.
         Raises ``VersionConflictError`` if the version has changed.
         """
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             result = await conn.fetchrow(
                 """
@@ -133,7 +148,7 @@ class CasePersistence:
                 )
             return int(result["version"])
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     # ------------------------------------------------------------------ #
     # Branches
@@ -141,7 +156,7 @@ class CasePersistence:
 
     async def create_branch(self, branch: BranchState) -> None:
         """Insert a new branch row."""
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             await conn.execute(
                 """
@@ -159,11 +174,11 @@ class CasePersistence:
                 branch.created_at,
             )
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     async def get_branch(self, branch_id: str) -> BranchState | None:
         """Fetch a branch by ID."""
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             row = await conn.fetchrow(
                 "SELECT id, case_id, parent_branch_id, hypothesis, depth, "
@@ -187,11 +202,11 @@ class CasePersistence:
                 created_at=row["created_at"],
             )
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     async def list_branches_for_case(self, case_id: str) -> list[BranchState]:
         """Fetch all branches for a case."""
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             rows = await conn.fetch(
                 "SELECT id, case_id, parent_branch_id, hypothesis, depth, "
@@ -220,7 +235,7 @@ class CasePersistence:
                 )
             return branches
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     async def update_branch(
         self, branch_id: str, status: str, expected_version: int
@@ -230,7 +245,7 @@ class CasePersistence:
         Returns the new version on success.
         Raises ``VersionConflictError`` if the version has changed.
         """
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             result = await conn.fetchrow(
                 """
@@ -249,7 +264,7 @@ class CasePersistence:
                 )
             return int(result["version"])
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     # ------------------------------------------------------------------ #
     # Hypotheses
@@ -257,7 +272,7 @@ class CasePersistence:
 
     async def create_hypothesis(self, hypothesis: Hypothesis, branch_id: str) -> str:
         """Insert a hypothesis and return its generated UUID."""
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             hypothesis_id = str(uuid.uuid4())
             await conn.execute(
@@ -274,11 +289,11 @@ class CasePersistence:
             )
             return hypothesis_id
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
 
     async def list_hypotheses_for_branch(self, branch_id: str) -> list[Hypothesis]:
         """Fetch all hypotheses for a branch."""
-        conn = await self._pool.acquire()
+        conn = await self._acquire()
         try:
             rows = await conn.fetch(
                 "SELECT description, confidence, status FROM wolfpack.hypotheses "
@@ -294,4 +309,4 @@ class CasePersistence:
                 for row in rows
             ]
         finally:
-            await self._pool.release(conn)
+            await self._release(conn)
