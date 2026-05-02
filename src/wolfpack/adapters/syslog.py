@@ -5,6 +5,7 @@ Supports RFC 3164 and RFC 5424 parsing from local files or UDP streams.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -56,7 +57,7 @@ class SyslogAdapter(TelemetrySource):
         if not path.exists():
             return events
 
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
         for line in text.splitlines():
             line = line.strip()
             if not line:

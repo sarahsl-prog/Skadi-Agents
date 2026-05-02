@@ -74,14 +74,14 @@ class TestEntity:
 class TestEvidenceRef:
     def test_minimal(self) -> None:
         ref = EvidenceRef(source_type="syslog", source_id="evt-123")
-        assert ref.hash is None
+        assert ref.content_hash is None
         assert ref.timestamp <= datetime.now(UTC)
 
     def test_round_trip(self) -> None:
         ref = EvidenceRef(
             source_type="crowdstrike",
             source_id="det-456",
-            hash="a" * 64,
+            content_hash="a" * 64,
             metadata={"host": "srv-01"},
         )
         restored = EvidenceRef.model_validate(ref.model_dump())

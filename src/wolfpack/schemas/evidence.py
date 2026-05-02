@@ -24,7 +24,7 @@ class EvidenceRef(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="UTC time the evidence was captured or received.",
     )
-    hash: str | None = Field(
+    content_hash: str | None = Field(
         default=None,
         description="SHA-256 of the evidence content (if available at capture time).",
     )

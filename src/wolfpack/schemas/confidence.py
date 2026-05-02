@@ -66,5 +66,6 @@ def calibrate(
         corr_boost = -1
 
     new_value = int(confidence) + count_boost + corr_boost
-    new_value = max(1, min(5, new_value))
+    # Never downgrade below the original confidence (docstring guarantee)
+    new_value = max(int(confidence), min(5, new_value))
     return Confidence(new_value)

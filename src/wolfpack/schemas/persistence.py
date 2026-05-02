@@ -6,6 +6,10 @@ import json
 import uuid
 
 import asyncpg
+import asyncio
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 from wolfpack.schemas.branch import BranchSpec
 from wolfpack.schemas.case_state import BranchState, CaseState
@@ -29,12 +33,22 @@ class PersistencePool:
         self._pool: asyncpg.Pool | None = None
 
     async def connect(self) -> None:
-        if self._pool is None:
-            self._pool = await asyncpg.create_pool(
-                self._dsn,
-                min_size=self._min_size,
-                max_size=self._max_size,
-            )
+        if self._pool is not None:
+            return
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                self._pool = await asyncpg.create_pool(
+                    self._dsn,
+                    min_size=self._min_size,
+                    max_size=self._max_size,
+                )
+                return
+            except Exception as exc:
+                last_exc = exc
+                _LOGGER.warning("PersistencePool connect attempt %d failed: %s", attempt + 1, exc)
+                await asyncio.sleep(2 ** attempt)
+        raise RuntimeError(f"Failed to create connection pool after 3 attempts: {last_exc}") from last_exc
 
     async def close(self) -> None:
         if self._pool is not None:
