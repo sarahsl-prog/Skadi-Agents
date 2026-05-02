@@ -129,10 +129,10 @@ These bugs cause crashes or completely broken functionality.
 
 ### 4.1 CloserDeps Wiring — `src/wolfpack/agents/closer.py`
 **Issues:** HIGH-13, MED-2  
-**Status:** RAG/adapters never wired to tools; missing field access
+**Status:** ✅ DONE — RAG/adapters wired to tools; reasoning_summary present
 
-- [ ] Lines 45-56: Wire `CloserDeps.rag` and `CloserDeps.adapters` into agent tool dependencies
-- [ ] Line 214: Add `reasoning_summary` field to `CloserOutput` or remove dead code
+- [x] Lines 45-56: Wire `CloserDeps.rag` and `CloserDeps.adapters` into agent tool dependencies
+- [x] Line 214: `reasoning_summary` field already present in `CloserOutput` (fixed in Priority 3.1)
 
 ### 4.2 RAG Alpha Weights — `src/wolfpack/rag/threat_intel.py`
 **Issues:** HIGH-14  
