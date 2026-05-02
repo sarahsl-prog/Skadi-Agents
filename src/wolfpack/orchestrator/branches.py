@@ -78,7 +78,12 @@ async def create_branch(
         updated_at=datetime.now(UTC),
     )
 
-    await persistence.create_branch(branch)
+    try:
+        await persistence.create_branch(branch)
+    except Exception:
+        if budget is not None and not branches_so_far:
+            budget.release(case_id, branches=1)
+        return None
 
     if budget is not None and branches_so_far:
         budget.consume(case_id, branches=1)

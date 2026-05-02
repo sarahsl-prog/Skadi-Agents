@@ -79,11 +79,25 @@ class BranchBudget:
                 depth_remaining=self._config.max_depth,
             )
 
+    def release(
+        self,
+        case_id: str,
+        *,
+        branches: int = 1,
+    ) -> None:
+        """Release previously consumed budget for *case_id*.
+
+        Called when a branch creation fails after budget was consumed,
+        so the count is not permanently leaked.
+        """
+        state = self._ensure(case_id)
+        state["branch_count"] = max(0, state["branch_count"] - branches)
+
     def consume(
         self,
         case_id: str,
         *,
-        branches: int = 0,
+        branches: int = 1,
     ) -> None:
         """Consume budget for *case_id*.
 

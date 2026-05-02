@@ -58,8 +58,8 @@ def _merge_hypotheses(existing: Hypothesis, new: Hypothesis) -> Hypothesis:
         description=description,
         confidence=confidence,
         evidence_refs=combined_refs,
-        status=existing.status,
-        branch_id=existing.branch_id,
+        status="open",
+        branch_id=new.branch_id,
     )
 
 
