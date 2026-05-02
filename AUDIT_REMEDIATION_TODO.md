@@ -107,10 +107,12 @@ These bugs cause crashes or completely broken functionality.
 
 ### 3.3 Tracker Output Schema — `src/wolfpack/agents/tracker.py`, `src/wolfpack/schemas/agents/tracker.py`
 **Issues:** HIGH-12  
-**Status:** Divergent schemas; different field names
+**Status:** ✅ DONE — Divergent schemas; different field names
 
-- [ ] Reconcile `TrackerOutput` fields: agent has `confidence`/`reasoning`, schema has `tracker_confidence`/`updated_entities`
-- [ ] Use single source of truth (prefer schema file)
+- [x] Reconcile `TrackerOutput` fields: agent had `confidence`/`reasoning`, schema had `tracker_confidence`/`updated_entities`
+- [x] Use single source of truth (schema file) — agent now imports schema model
+- [x] Added `reasoning` field to schema `TrackerOutput`
+- [x] Updated `run_tracker` to use `output.tracker_confidence`
 
 ### 3.4 Persistence Layer — `src/wolfpack/schemas/persistence.py`
 **Issues:** HIGH-4, MED-63, MED-64  

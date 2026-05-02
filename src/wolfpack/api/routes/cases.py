@@ -69,13 +69,12 @@ async def get_case(
     case_id: str,
     auth: RequireAuth,  # noqa: ARG001
 ) -> dict[str, Any]:
-    """Get full case details including branches."""
+    """Get full case details including branches, hypotheses, and evidence."""
     pool = _get_pool()
     persistence = CasePersistence(pool)
-    case = await persistence.get_case(case_id)
+    case = await persistence.get_full_case(case_id)
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
-    branches = await persistence.list_branches_for_case(case_id)
     return {
         "case_id": case.case_id,
         "seed": case.seed.model_dump(),
@@ -86,7 +85,9 @@ async def get_case(
         "overall_confidence": case.overall_confidence,
         "verdict_decision": case.verdict_decision,
         "review_decision": case.review_decision,
-        "branches": [b.model_dump() for b in branches],
+        "branches": [b.model_dump() for b in case.branches],
+        "hypotheses": [h.model_dump() for h in case.hypotheses],
+        "evidence_refs": [e.model_dump() for e in case.evidence_refs],
         "created_at": case.created_at.isoformat() if case.created_at else None,
         "updated_at": case.updated_at.isoformat() if case.updated_at else None,
     }
