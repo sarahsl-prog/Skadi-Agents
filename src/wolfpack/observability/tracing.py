@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import threading
 from typing import Any, Awaitable, Callable, cast
 
 from opentelemetry import trace
@@ -21,8 +22,19 @@ from wolfpack.config.settings import Settings
 from wolfpack.observability.baggage import attach_baggage_to_span
 
 _bootstrapped = False
+_lock = threading.Lock()
 
 TRACER_NAME = "wolfpack"
+
+
+def reset_tracing() -> None:
+    """Reset the bootstrap flag so ``bootstrap_tracing()`` can be called again.
+
+    Primarily useful in test suites that need a fresh TracerProvider per test.
+    """
+    global _bootstrapped
+    with _lock:
+        _bootstrapped = False
 
 
 def bootstrap_tracing(settings: Settings) -> TracerProvider:
@@ -33,30 +45,31 @@ def bootstrap_tracing(settings: Settings) -> TracerProvider:
     settings.otel.endpoint.  The global provider is set on first call only.
     """
     global _bootstrapped
-    if _bootstrapped:
-        return trace.get_tracer_provider()  # type: ignore[return-value]
+    with _lock:
+        if _bootstrapped:
+            return trace.get_tracer_provider()  # type: ignore[return-value]
 
-    # Defensive: if another path already set a real provider, reuse it.
-    existing = trace.get_tracer_provider()
-    if hasattr(existing, "resource"):
+        # Defensive: if another path already set a real provider, reuse it.
+        existing = trace.get_tracer_provider()
+        if hasattr(existing, "resource"):
+            _bootstrapped = True
+            return existing  # type: ignore[return-value]
+
+        resource = Resource.create(
+            {
+                "service.name": settings.otel.service_name,
+                "service.namespace": settings.otel.service_namespace,
+                "deployment.environment": settings.deployment_mode.value,
+            }
+        )
+
+        exporter = OTLPSpanExporter(endpoint=f"{settings.otel.endpoint}/v1/traces")
+        provider = TracerProvider(resource=resource)
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+
+        trace.set_tracer_provider(provider)
         _bootstrapped = True
-        return existing  # type: ignore[return-value]
-
-    resource = Resource.create(
-        {
-            "service.name": settings.otel.service_name,
-            "service.namespace": settings.otel.service_namespace,
-            "deployment.environment": settings.deployment_mode.value,
-        }
-    )
-
-    exporter = OTLPSpanExporter(endpoint=f"{settings.otel.endpoint}/v1/traces")
-    provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(exporter))
-
-    trace.set_tracer_provider(provider)
-    _bootstrapped = True
-    return provider
+        return provider
 
 
 # --------------------------------------------------------------------------- #
@@ -70,14 +83,20 @@ NodeFn = (
 
 
 def traced_node(
-    agent_name: str,
+    agent_name: str | NodeFn = "unnamed",
     node_fn: NodeFn | None = None,
 ) -> NodeFn:
     """Wrap a LangGraph node handler with an OTel span.
 
-    Usage as a decorator::
+    Usage as a decorator (with name)::
 
         @traced_node("tracker")
+        def tracker_node(state):
+            ...
+
+    Usage as a decorator (without name — uses function ``__name__``)::
+
+        @traced_node
         def tracker_node(state):
             ...
 
@@ -88,6 +107,12 @@ def traced_node(
             ...
     """
 
+    # Handle bare decorator usage: @traced_node
+    if callable(agent_name):
+        node_fn = agent_name
+        agent_name = getattr(node_fn, "__name__", "unnamed")
+    resolved_name = str(agent_name)
+
     def _outer_wrapper(fn: NodeFn) -> NodeFn:
         if asyncio.iscoroutinefunction(fn):
             async_fn = cast(Callable[[Any], Awaitable[dict[str, Any]]], fn)
@@ -96,8 +121,8 @@ def traced_node(
             async def _async_wrapped(state: Any) -> dict[str, Any]:
                 tracer = trace.get_tracer(TRACER_NAME)
                 with tracer.start_as_current_span(
-                    f"node.{agent_name}",
-                    attributes={"wolfpack.agent_name": agent_name},
+                    f"node.{resolved_name}",
+                    attributes={"wolfpack.agent_name": resolved_name},
                 ) as span:
                     attach_baggage_to_span(span)
                     try:
@@ -117,8 +142,8 @@ def traced_node(
         def _sync_wrapped(state: Any) -> dict[str, Any]:
             tracer = trace.get_tracer(TRACER_NAME)
             with tracer.start_as_current_span(
-                f"node.{agent_name}",
-                attributes={"wolfpack.agent_name": agent_name},
+                f"node.{resolved_name}",
+                attributes={"wolfpack.agent_name": resolved_name},
             ) as span:
                 attach_baggage_to_span(span)
                 try:

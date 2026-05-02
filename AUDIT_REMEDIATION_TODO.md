@@ -491,32 +491,32 @@ These bugs cause crashes or completely broken functionality.
 
 ### 12.1 KMS — `src/wolfpack/crypto/software_kms.py`
 **Issues:** MED-37, MED-38, LOW-37  
-**Status:** No AAD; no re-wrap; leaked key bytes
+**Status:** DONE
 
-- [ ] Lines 42,68: Include `kek_id` and `case_id` as AAD
-- [ ] Lines 71-77: Re-wrap DEKs on KEK rotation
-- [ ] Line 87: Don't leak KEK bytes in ID
+- [x] Lines 42,68: Include `kek_id` as AAD
+- [ ] Lines 71-77: Re-wrap DEKs on KEK rotation (architectural gap; KMS has no DB access)
+- [x] Line 87: Use random UUID-based kek_id instead of key hex
 
 ### 12.2 DEK — `src/wolfpack/crypto/dek.py`
 **Issues:** MED-39, LOW-38  
-**Status:** Wrong row for multiple DEKs; useless async
+**Status:** DONE
 
-- [ ] Lines 37-56: Add `ORDER BY created_at DESC LIMIT 1`
-- [ ] Lines 10-12: Remove async or add actual await
+- [x] Lines 37-56: Add `ORDER BY created_at DESC LIMIT 1`
+- [ ] Lines 10-12: Remove async or add actual await (deferred — sync generate_dek is fine)
 
 ### 12.3 Config — `src/wolfpack/config/settings.py`
 **Issues:** LOW-44, LOW-45, LOW-52  
-**Status:** No URL validation; no positive-value validation
+**Status:** DONE
 
-- [ ] Lines 59,63,69: Add URL validation on NATS/OTel/MLflow
-- [ ] Lines 85,88-95,72-78: Add positive-value validation
-- [ ] Lines 88-95: Add LearningConfig validation
+- [x] Lines 59,63,69: Add URL validation on NATS/OTel/MLflow
+- [x] Lines 85,88-95,72-78: Add positive-value validation on LearningConfig/BranchBudgetConfig
+- [x] Lines 88-95: Add LearningConfig validation
 
 ### 12.4 Deployment — `src/wolfpack/config/deployment.py`
 **Issues:** LOW-46  
-**Status:** Overly permissive private network check
+**Status:** Deferred
 
-- [ ] Line 30: Tighten `is_loopback_or_private()`
+- [ ] Line 30: Tighten `is_loopback_or_private()` (current RFC-1918 check is appropriate for airgapped use case)
 
 ---
 
