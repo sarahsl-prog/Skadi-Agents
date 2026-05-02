@@ -20,7 +20,7 @@ from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig
 
 from wolfpack.config.settings import NATSConfig
-from wolfpack.observability.nats_propagation import extract_nats_headers, inject_nats_headers
+from wolfpack.observability.nats_propagation import context, extract_nats_headers, inject_nats_headers
 
 
 class NATSClient:
@@ -128,9 +128,13 @@ class NATSClient:
         if self._js is None:
             raise RuntimeError("NATSClient not connected - call connect() first")
 
-        def _wrapped_handler(msg: Msg) -> Any:
-            extract_nats_headers(dict(msg.headers) if msg.headers else None)
-            return handler(msg)
+        async def _wrapped_handler(msg: Msg) -> Any:
+            ctx = extract_nats_headers(dict(msg.headers) if msg.headers else None)
+            token = context.attach(ctx)
+            try:
+                return await handler(msg)
+            finally:
+                context.detach(token)
 
         return await self._js.subscribe(
             subject,
