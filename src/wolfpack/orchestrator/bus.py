@@ -62,9 +62,11 @@ class NATSClient:
         for name, subjects in streams:
             try:
                 await self._js.add_stream(name=name, subjects=subjects)
-            except nats.js.errors.BadRequestError:
-                # Stream likely already exists; idempotent.
-                pass
+            except nats.js.errors.BadRequestError as exc:
+                # Distinguish "already exists" from genuine bad requests.
+                desc = getattr(exc, "description", "") or ""
+                if "already exists" not in desc.lower():
+                    raise
 
     async def publish(
         self,
@@ -90,13 +92,13 @@ class NATSClient:
             raise RuntimeError("NATSClient not connected - call connect() first")
 
         if isinstance(payload, dict):
-            payload = json.dumps(payload).encode()
+            payload = json.dumps(payload, default=str).encode()
         elif isinstance(payload, str):
             payload = payload.encode()
 
-        merged_headers = inject_nats_headers()
-        if headers:
-            merged_headers.update(headers)
+        # User headers merged first so OTel propagation wins and cannot be overwritten.
+        merged_headers = dict(headers) if headers else {}
+        merged_headers.update(inject_nats_headers())
 
         return await self._js.publish(
             subject, payload, headers=merged_headers
@@ -147,6 +149,10 @@ class NATSClient:
     async def close(self) -> None:
         """Drain and close the NATS connection."""
         if self._nc is not None:
+            try:
+                await self._nc.drain()
+            except Exception:
+                pass
             await self._nc.close()
             self._nc = None
             self._js = None

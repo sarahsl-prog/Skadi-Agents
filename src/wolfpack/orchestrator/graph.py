@@ -188,8 +188,8 @@ def build_hunt_graph(
         if scribe is None:
             scribe = stub_scribe
 
-    if alpha is None or tracker is None or flanker is None or closer is None or review is None:
-        raise RuntimeError("All main agent nodes must be provided or use_stubs=True")
+    if alpha is None or tracker is None or flanker is None or closer is None or review is None or scribe is None:
+        raise RuntimeError("All agent nodes (including scribe) must be provided or use_stubs=True")
 
     # Wrap every node with OTel tracing before (optionally) wiring NATS.
     alpha = traced_node("alpha_dispatcher", alpha)
@@ -200,7 +200,7 @@ def build_hunt_graph(
     scribe = traced_node("scribe", scribe)
 
     if nats_client is not None:
-        alpha = _wrap_with_nats(alpha, "hunt.task.tracker", nats_client)
+        alpha = _wrap_with_nats(alpha, "hunt.task.alpha", nats_client)
         tracker = _wrap_with_nats(tracker, "hunt.finding.tracker", nats_client)
         flanker = _wrap_with_nats(flanker, "hunt.finding.flanker", nats_client)
         closer = _wrap_with_nats(closer, "hunt.status.verdict", nats_client)
