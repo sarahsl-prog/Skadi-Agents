@@ -105,8 +105,8 @@ class ProxySource(TelemetrySource):
 
             domain = urlparse(url).hostname or ""
 
-        # Filter by entity
-        entity_match = entity.value in (client_ip, domain, url, status)
+        # Filter by entity (status code is not an entity match)
+        entity_match = entity.value in (client_ip, domain, url)
         if not entity_match:
             return None
 

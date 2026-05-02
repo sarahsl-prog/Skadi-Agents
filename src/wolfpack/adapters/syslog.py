@@ -19,11 +19,24 @@ class SyslogAdapter(TelemetrySource):
 
     name = "syslog"
 
+    # RFC 3164 (legacy): <priority>timestamp host message
     _SYSLOG_RE = re.compile(
-        r"^(?P<priority>&lt;\d+&gt;)?"
+        r"^(?P<priority><\d+>)?"
         r"(?P<timestamp>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+"
         r"(?P<host>\S+)\s+"
         r"(?P<message>.+)$"
+    )
+
+    # RFC 5424: <priority>version timestamp hostname app procid msgid structured-data msg
+    _SYSLOG_RFC5424_RE = re.compile(
+        r"^(?P<priority><\d+>)?(?P<version>\d+)\s+"
+        r"(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))\s+"
+        r"(?P<host>\S+)\s+"
+        r"(?P<app>\S+)\s+"
+        r"(?P<procid>\S+)\s+"
+        r"(?P<msgid>\S+)\s+"
+        r"(?P<sd>-|\[.+?\])\s*"
+        r"(?P<message>.*)$"
     )
 
     def __init__(self, log_path: str | None = None) -> None:
@@ -48,24 +61,32 @@ class SyslogAdapter(TelemetrySource):
             line = line.strip()
             if not line:
                 continue
-            match = self._SYSLOG_RE.match(line)
-            if not match:
-                continue
 
-            msg = match.group("message")
-            host = match.group("host")
+            match = self._SYSLOG_RFC5424_RE.match(line)
+            if match:
+                msg = match.group("message")
+                host = match.group("host")
+                ts_str = match.group("timestamp")
+                try:
+                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                except ValueError:
+                    ts = datetime.now(UTC)
+            else:
+                match = self._SYSLOG_RE.match(line)
+                if not match:
+                    continue
+                msg = match.group("message")
+                host = match.group("host")
+                ts_str = match.group("timestamp")
+                try:
+                    ts = datetime.strptime(ts_str, "%b %d %H:%M:%S")
+                    ts = self._apply_year(ts)
+                except ValueError:
+                    ts = datetime.now(UTC)
 
             # Filter by entity value (hostname or IP)
             if entity.value not in msg and entity.value != host:
                 continue
-
-            # Parse timestamp (RFC 3164 lacks year; use current)
-            ts_str = match.group("timestamp")
-            try:
-                ts = datetime.strptime(ts_str, "%b %d %H:%M:%S")
-                ts = ts.replace(year=datetime.now(UTC).year, tzinfo=UTC)
-            except ValueError:
-                ts = datetime.now(UTC)
 
             if not (time_window.start <= ts <= time_window.end):
                 continue
@@ -86,6 +107,16 @@ class SyslogAdapter(TelemetrySource):
         if self._log_path is None:
             return False
         return Path(self._log_path).exists()
+
+    @staticmethod
+    def _apply_year(ts: datetime) -> datetime:
+        """Assign year to RFC-3164 timestamps, correcting for year boundary."""
+        now = datetime.now(UTC)
+        ts = ts.replace(year=now.year, tzinfo=UTC)
+        # If the resulting timestamp is in the future, it belongs to last year
+        if ts > now:
+            ts = ts.replace(year=now.year - 1)
+        return ts
 
     @staticmethod
     def _infer_severity(message: str) -> str:

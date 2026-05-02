@@ -85,12 +85,15 @@ class FirewallAdapter(TelemetrySource):
             return None
 
         # Parse timestamp
-        ts = datetime.now(UTC)
+        now = datetime.now(UTC)
+        ts = now
         if "month" in match.groupdict():
             ts_str = f"{match.group('month')} {match.group('day')} {match.group('time')}"
             try:
                 ts = datetime.strptime(ts_str, "%b %d %H:%M:%S")
-                ts = ts.replace(year=datetime.now(UTC).year, tzinfo=UTC)
+                ts = ts.replace(year=now.year, tzinfo=UTC)
+                if ts > now:
+                    ts = ts.replace(year=now.year - 1)
             except ValueError:
                 pass
 

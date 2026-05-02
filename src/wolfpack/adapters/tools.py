@@ -12,6 +12,7 @@ from typing import Any
 from pydantic_ai import RunContext
 
 from wolfpack.adapters.base import Event, TelemetrySource, TimeWindow
+from wolfpack.processing.pii_pipeline import PIIPipeline
 from wolfpack.schemas.entity import Entity
 
 
@@ -22,11 +23,15 @@ class AdapterDeps:
         self,
         adapters: dict[str, TelemetrySource],
         case_id: str | None = None,
-        pii_pipeline: Any | None = None,
+        pii_pipeline: PIIPipeline | None = None,
     ) -> None:
         self.adapters = adapters
         self.case_id = case_id
         self.pii_pipeline = pii_pipeline
+
+
+# Valid entity types as declared in schemas/entity.py
+_ENTITY_TYPES = frozenset({"host", "user", "ip", "domain", "hash", "url"})
 
 
 def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
@@ -45,6 +50,10 @@ def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
         end_iso: str,
         top_k: int = 20,
     ) -> list[Event]:
+        if entity_type not in _ENTITY_TYPES:
+            raise ValueError(f"Invalid entity_type: {entity_type!r}. Must be one of: {sorted(_ENTITY_TYPES)}")
+        if not entity_value:
+            raise ValueError("entity_value must be non-empty")
         entity = Entity(type=entity_type, value=entity_value)
         start = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
         end = datetime.fromisoformat(end_iso.replace("Z", "+00:00"))

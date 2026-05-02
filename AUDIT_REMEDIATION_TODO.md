@@ -330,93 +330,93 @@ These bugs cause crashes or completely broken functionality.
 
 ### 9.1 RAG Base — `src/wolfpack/rag/base.py`
 **Issues:** MED-51, LOW-29, LOW-30, LOW-33, LOW-42  
-**Status:** No top_k validation; per-call client; missing extension; no length validation
+**Status:** DONE
 
-- [ ] Lines 103-142: Add bounds `top_k: int = Query(10, ge=1, le=200)`
-- [ ] Line 76: Create `httpx.AsyncClient` once
-- [ ] Lines 121-140: Add `CREATE EXTENSION vector` in `ensure_schema()`
-- [ ] Lines 142-145: Validate vector length
-- [ ] `case_history.py:42-43`, `threat_intel.py:41-42`: Include `ensure_schema()` in pipeline
+- [x] Lines 103-142: Add bounds `top_k: int = Query(10, ge=1, le=200)`
+- [x] Line 76: Create `httpx.AsyncClient` once
+- [x] Lines 121-140: Add `CREATE EXTENSION vector` in `ensure_schema()`
+- [x] Lines 142-145: Validate vector length
+- [x] `case_history.py:42-43`, `threat_intel.py:41-42`: Include `ensure_schema()` in pipeline
 
 ### 9.2 Score Fusion — `src/wolfpack/rag/case_history.py`, `threat_intel.py`
 **Issues:** MED-23  
-**Status:** Non-additive combination
+**Status:** DONE
 
-- [ ] `case_history.py:98-105`, `threat_intel.py:80-87`: Use additive combination
+- [x] `case_history.py:98-105`, `threat_intel.py:80-87`: Use additive combination
 
 ### 9.3 Prompt Injection — `src/wolfpack/rag/tools.py`
 **Issues:** MED-48  
-**Status:** Bypassable defense
+**Status:** DONE
 
-- [ ] Lines 50-65: Multi-layer defense: strict validation, delimiters, robust regex set
-- [ ] Lines 85-87: Sanitize metadata
+- [x] Lines 50-65: Multi-layer defense: strict validation, delimiters, robust regex set
+- [x] Lines 85-87: Sanitize metadata
 
 ### 9.4 CrowdStrike — `src/wolfpack/adapters/crowdstrike.py`
 **Issues:** MED-24, MED-25, LOW-23, LOW-24  
-**Status:** Fake timestamp; no token refresh; per-request client; malformed filter
+**Status:** DONE
 
-- [ ] Lines 64-65,50-71: Fetch full detection details; use actual timestamp
-- [ ] Lines 84-101: Track token expiry; refresh when expired
-- [ ] Lines 49,89: Create client once
-- [ ] Line 123: Don't start FQL with `+` when filter empty
+- [x] Lines 64-65,50-71: Fetch full detection details; use actual timestamp
+- [x] Lines 84-101: Track token expiry; refresh when expired
+- [x] Lines 49,89: Create client once
+- [x] Line 123: Don't start FQL with `+` when filter empty
 
 ### 9.5 Okta — `src/wolfpack/adapters/okta.py`
 **Issues:** MED-26, MED-27, LOW-23, LOW-25, LOW-41  
-**Status:** Invalid filter concat; no pagination limit; per-request client; SSRF risk
+**Status:** DONE
 
-- [ ] Lines 57-59: Reconstruct filter for user queries; don't combine `q` and `filter`
-- [ ] Lines 64-103: Add `max_pages` or `max_events` limit
-- [ ] Lines 63,111: Create client once
-- [ ] Lines 52-59: Handle `q` + `filter` incompatibility
-- [ ] Line 27: Add SSRF validation on `base_url`
+- [x] Lines 57-59: Reconstruct filter for user queries; don't combine `q` and `filter`
+- [x] Lines 64-103: Add `max_pages` or `max_events` limit
+- [x] Lines 63,111: Create client once
+- [x] Lines 52-59: Handle `q` + `filter` incompatibility
+- [x] Line 27: Add SSRF validation on `base_url`
 
 ### 9.6 Windows EventLog — `src/wolfpack/adapters/windows_eventlog.py`
 **Issues:** MED-49, LOW-22, LOW-28, LOW-40  
-**Status:** XXE vulnerability; wrong level mapping; swallowed exceptions; no path validation
+**Status:** DONE
 
-- [ ] Lines 84,103: Use `defusedxml.ElementTree`
-- [ ] Lines 177-185: Fix level 2 mapping; add level 5
-- [ ] Lines 41-45: Log exceptions instead of swallowing
-- [ ] Add path traversal validation on `evtx_path`
+- [x] Lines 84,103: Use `defusedxml.ElementTree`
+- [x] Lines 177-185: Fix level 2 mapping; add level 5
+- [x] Lines 41-45: Log exceptions instead of swallowing
+- [x] Add path traversal validation on `evtx_path`
 
 ### 9.7 Syslog — `src/wolfpack/adapters/syslog.py`
 **Issues:** MED-54, LOW-31  
-**Status:** RFC 5424 not supported; year-boundary issue
+**Status:** DONE
 
-- [ ] Lines 22-27: Add RFC 5424 regex or update docstring
-- [ ] Lines 64-68: Fix year-boundary parsing
+- [x] Lines 22-27: Add RFC 5424 regex or update docstring
+- [x] Lines 64-68: Fix year-boundary parsing
 
 ### 9.8 File Adapters — All `src/wolfpack/adapters/*.py`
 **Issues:** MED-50, LOW-40  
-**Status:** Blocking event loop; no path validation
+**Status:** Partial (path validation done; asyncio.to_thread deferred)
 
 - [ ] All adapters: Use `asyncio.to_thread()` or `aiofiles` for file I/O
-- [ ] Add path traversal validation on `log_path`/`evtx_path`
+- [x] Add path traversal validation on `log_path`/`evtx_path`
 
 ### 9.9 Adapter Tools — `src/wolfpack/adapters/tools.py`
 **Issues:** MED-52, LOW-43  
-**Status:** Unvalidated entity_type; Any-typed pipeline
+**Status:** DONE
 
-- [ ] Lines 40-48: Validate `entity_type` against Entity Literal
-- [ ] Line 25: Type `AdapterDeps.pii_pipeline` properly
+- [x] Lines 40-48: Validate `entity_type` against Entity Literal
+- [x] Line 25: Type `AdapterDeps.pii_pipeline` properly
 
 ### 9.10 DNS — `src/wolfpack/adapters/dns.py`
 **Issues:** LOW-27  
-**Status:** Empty value entities
+**Status:** DONE
 
-- [ ] Line 174: Validate non-empty value before creating Entity
+- [x] Line 174: Validate non-empty value before creating Entity
 
 ### 9.11 Proxy — `src/wolfpack/adapters/proxy.py`
 **Issues:** LOW-26  
-**Status:** Entity matched against status code
+**Status:** DONE
 
-- [ ] Line 109: Fix entity matching logic
+- [x] Line 109: Fix entity matching logic
 
 ### 9.12 Firewall — `src/wolfpack/adapters/firewall.py`
 **Issues:** LOW-31  
-**Status:** Year-boundary issue
+**Status:** DONE
 
-- [ ] Lines 88-95: Fix timestamp parsing
+- [x] Lines 88-95: Fix timestamp parsing
 
 ---
 

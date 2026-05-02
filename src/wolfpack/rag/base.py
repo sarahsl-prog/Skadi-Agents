@@ -71,24 +71,27 @@ class OllamaEmbedder:
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._timeout = timeout_s
+        self._client = httpx.AsyncClient(timeout=self._timeout)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Return embedding vectors for *texts* via Ollama /api/embed."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{self._base_url}/api/embed",
-                json={"model": self._model, "input": texts},
-            )
-            resp.raise_for_status()
-            data: dict[str, Any] = resp.json()
-            embeddings: list[Any] = data.get("embeddings", [])
-            # Ollama returns list of vectors when input is a list
-            if embeddings and isinstance(embeddings[0], list):
-                return [list(map(float, emb)) for emb in embeddings]
-            # Single vector fallback
-            if embeddings:
-                return [list(map(float, embeddings))]
-            return []
+        resp = await self._client.post(
+            f"{self._base_url}/api/embed",
+            json={"model": self._model, "input": texts},
+        )
+        resp.raise_for_status()
+        data: dict[str, Any] = resp.json()
+        embeddings: list[Any] = data.get("embeddings", [])
+        # Ollama returns list of vectors when input is a list
+        if embeddings and isinstance(embeddings[0], list):
+            return [list(map(float, emb)) for emb in embeddings]
+        # Single vector fallback
+        if embeddings:
+            return [list(map(float, embeddings))]
+        return []
+
+    async def close(self) -> None:
+        await self._client.aclose()
 
     @classmethod
     def from_llm_config(cls, cfg: LLMConfig) -> OllamaEmbedder:
@@ -132,9 +135,15 @@ class PGVectorStore:
         self._vector_dim = vector_dim
         self._embedder = embedder
 
+    @staticmethod
+    def _validate_top_k(top_k: int) -> None:
+        if not isinstance(top_k, int) or not (1 <= top_k <= 200):
+            raise ValueError(f"top_k must be an integer between 1 and 200, got {top_k!r}")
+
     async def ensure_schema(self) -> None:
         """Create the table and vector index if they do not exist."""
         async with self._pool.acquire() as conn:
+            await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
             await conn.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS {self._table} (
@@ -170,6 +179,10 @@ class PGVectorStore:
             embeddings = [[0.0] * self._vector_dim for _ in documents]
         async with self._pool.acquire() as conn:
             for doc, emb in zip(documents, embeddings, strict=True):
+                if len(emb) != self._vector_dim:
+                    raise ValueError(
+                        f"Embedding dimension mismatch: expected {self._vector_dim}, got {len(emb)}"
+                    )
                 _sql = (
                     f"""
                     INSERT INTO {self._table} (id, content, metadata, embedding)
@@ -195,6 +208,7 @@ class PGVectorStore:
         filters: dict[str, Any] | None = None,
     ) -> list[RAGDocument]:
         """Cosine-similarity search over the vector column."""
+        self._validate_top_k(top_k)
         where_clause = ""
         params: list[Any] = [self._format_vector(query_embedding), top_k]
         if filters:
@@ -238,6 +252,7 @@ class PGVectorStore:
         filters: dict[str, Any] | None = None,
     ) -> list[RAGDocument]:
         """Embed *query* and run similarity search."""
+        self._validate_top_k(top_k)
         if self._embedder is None:
             return []
         embeddings = await self._embedder.embed([query])
@@ -254,6 +269,7 @@ class PGVectorStore:
         filters: dict[str, Any] | None = None,
     ) -> list[RAGDocument]:
         """Full-text search using Postgres tsvector (fallback when no embedding)."""
+        self._validate_top_k(top_k)
         where_clause = ""
         params: list[Any] = [query, top_k]
         if filters:

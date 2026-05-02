@@ -113,8 +113,7 @@ class DNSSource(TelemetrySource):
             source=self.name,
             raw_payload={"line": line, **gd},
             entities=[
-                Entity(type="domain", value=domain),
-                Entity(type="ip", value=client_ip),
+                Entity(type="domain", value=domain) if domain else Entity(type="ip", value=client_ip),
             ],
             metadata={
                 "query_type": qtype,
@@ -171,7 +170,7 @@ class DNSSource(TelemetrySource):
             source=self.name,
             raw_payload=data,
             entities=[
-                Entity(type="domain", value=domain) if domain else Entity(type="ip", value=src_ip),
+                Entity(type="domain", value=domain) if domain else Entity(type="ip", value=src_ip) if src_ip else Entity(type="domain", value="unknown"),
             ],
             metadata={
                 "query_type": qtype,
