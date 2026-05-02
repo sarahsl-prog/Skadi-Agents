@@ -8,8 +8,11 @@ from __future__ import annotations
 from typing import Any
 
 import asyncpg
+import logging
 
 from wolfpack.eval.replay import ReplayHarness
+
+_LOGGER = logging.getLogger(__name__)
 from wolfpack.learning.summary import format_case_summary
 from wolfpack.rag.case_history import CaseHistoryPipeline
 from wolfpack.schemas.confidence import Confidence
@@ -137,13 +140,17 @@ class LearningQueueWorker:
             ),
         )
 
-        # 3. Quality gate: need plausible or above
+        # 3. Quality gate: need plausible or above (soft fail → skip)
         min_confidence = Confidence.PLAUSIBLE
         if verdict.confidence < min_confidence:
-            raise RuntimeError(
-                f"Confidence {verdict.confidence} < {min_confidence} "
-                f"for case {case_id}"
+            _LOGGER.warning(
+                "Skipping case %s: confidence %s < %s",
+                case_id,
+                verdict.confidence,
+                min_confidence,
             )
+            await self._set_failure_status(str(entry["id"]), "low_confidence")
+            return
 
         # 4. Format summary
         summary = format_case_summary(case_state, verdict=verdict)
@@ -165,6 +172,20 @@ class LearningQueueWorker:
                 WHERE id = $1
                 """,
                 entry_id,
+            )
+
+    async def _set_failure_status(self, entry_id: str, reason: str) -> None:
+        """Mark entry as permanently failed (no more retries)."""
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE wolfpack.learning_queue
+                SET last_error = $2,
+                    ingested_at = NOW()
+                WHERE id = $1
+                """,
+                entry_id,
+                reason,
             )
 
     async def _handle_failure(
@@ -275,6 +296,7 @@ class LearningQueueWorker:
                         content = json.loads(content)
                     ref = EvidenceRef.model_validate(content)
                     branch.evidence_refs.append(ref)
+                case.evidence_refs.append(ref)
                 case.branches.append(branch)
 
             return case

@@ -26,7 +26,7 @@ class GoldenSet:
 
     @property
     def name(self) -> str:
-        return str(self.data["name"])
+        return str(self.data.get("name", self.path.stem))
 
     @property
     def seed(self) -> Seed:
@@ -76,13 +76,22 @@ class EvalResult:
         actual = self.tracker_output.get("hypotheses", [])
         if not expected:
             return 1.0 if not actual else 0.0
-        # Simple string containment match on description
+        # Token-overlap (Jaccard) match on description tokens
+        def _tokens(text: str) -> set[str]:
+            return set(text.lower().split())
+
         matched = 0
         for eh in expected:
-            desc = eh.get("description", "").lower()
+            expected_tokens = _tokens(eh.get("description", ""))
+            if not expected_tokens:
+                continue
             for ah in actual:
-                actual_desc = ah.get("description", "").lower()
-                if desc in actual_desc or actual_desc in desc:
+                actual_tokens = _tokens(ah.get("description", ""))
+                if not actual_tokens:
+                    continue
+                overlap = expected_tokens & actual_tokens
+                union = expected_tokens | actual_tokens
+                if union and len(overlap) / len(union) >= 0.5:
                     matched += 1
                     break
         return matched / len(expected)

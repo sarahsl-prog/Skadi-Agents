@@ -30,8 +30,10 @@ class EntitySummary(BaseModel):
     )
 
     @classmethod
-    def from_entity(cls, entity: Entity, salt: str = "wolfpack-learning") -> EntitySummary:
-        digest = hashlib.sha256(f"{salt}:{entity.value}".encode()).hexdigest()[:12]
+    def from_entity(cls, entity: Entity, salt: str | None = None) -> EntitySummary:
+        if salt is None:
+            salt = "wolfpack-learning"
+        digest = hashlib.sha256(f"{salt}:{entity.value}".encode()).hexdigest()[:16]
         return cls(type=entity.type, pseudonym=f"{entity.type}-{digest}")
 
 
@@ -105,6 +107,7 @@ def format_case_summary(
     case_state: CaseState,
     verdict: VerdictPacket | None = None,
     evidence: list[EvidenceRef] | None = None,
+    salt: str | None = None,
 ) -> CaseSummary:
     """Produce a :class:`CaseSummary` from a closed case.
 
@@ -159,7 +162,7 @@ def format_case_summary(
             key = f"{entity.type}:{entity.value}"
             if key not in seen:
                 seen.add(key)
-                entity_summaries.append(EntitySummary.from_entity(entity))
+                entity_summaries.append(EntitySummary.from_entity(entity, salt=salt))
 
     # Duration
     created = case_state.created_at
