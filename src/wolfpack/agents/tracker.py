@@ -46,18 +46,7 @@ class TrackerInput(BaseModel):
     )
 
 
-class TrackerOutput(BaseModel):
-    """What the Tracker produces."""
-
-    hypotheses: list[Hypothesis] = Field(default_factory=list)
-    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
-    confidence: Confidence = Field(
-        default=Confidence.PLAUSIBLE,
-        description="Calibrated confidence based on evidence volume and diversity.",
-    )
-    reasoning: str = Field(
-        default="", description="Concise human-readable reasoning."
-    )
+from wolfpack.schemas.agents.tracker import TrackerOutput
 
 
 # ------------------------------------------------------------------ #
@@ -214,7 +203,7 @@ async def run_tracker(
     return {
         "hypotheses": [h.model_dump() for h in output.hypotheses],
         "evidence_refs": [e.model_dump() for e in output.evidence_refs],
-        "tracker_confidence": output.confidence,
+        "tracker_confidence": output.tracker_confidence,
         "status": "shadowing",
         "reasoning": output.reasoning,
     }

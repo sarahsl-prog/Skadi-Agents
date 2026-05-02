@@ -3832,6 +3832,7 @@ source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },
     { name = "cryptography" },
+    { name = "fastapi" },
     { name = "haystack-ai" },
     { name = "httpx" },
     { name = "langgraph" },
@@ -3847,6 +3848,7 @@ dependencies = [
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
     { name = "typer" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -3873,6 +3875,7 @@ dev = [
 requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "cryptography", specifier = ">=42.0.0" },
+    { name = "fastapi", specifier = ">=0.115.0" },
     { name = "haystack-ai", specifier = ">=2.14.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "langgraph", specifier = ">=0.6.7" },
@@ -3890,6 +3893,7 @@ requires-dist = [
     { name = "pydantic-ai", specifier = ">=1.0.15" },
     { name = "pydantic-settings", specifier = ">=2.11.0" },
     { name = "typer", specifier = ">=0.19.2" },
+    { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 provides-extras = ["presidio"]
 
