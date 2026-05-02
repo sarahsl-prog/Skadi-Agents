@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, cast
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -83,18 +83,19 @@ def traced_node(
     """
 
     def _outer_wrapper(fn: NodeFn) -> NodeFn:
-        tracer = trace.get_tracer(TRACER_NAME)
-
         if asyncio.iscoroutinefunction(fn):
+            async_fn = cast(Callable[[Any], Awaitable[dict[str, Any]]], fn)
+
             @functools.wraps(fn)
             async def _async_wrapped(state: Any) -> dict[str, Any]:
+                tracer = trace.get_tracer(TRACER_NAME)
                 with tracer.start_as_current_span(
                     f"node.{agent_name}",
                     attributes={"wolfpack.agent_name": agent_name},
                 ) as span:
                     attach_baggage_to_span(span)
                     try:
-                        result = await fn(state)
+                        result = await async_fn(state)
                         span.set_attribute("wolfpack.status", result.get("status", "unknown"))
                         return result
                     except Exception as exc:
@@ -102,17 +103,20 @@ def traced_node(
                         span.set_status(trace.StatusCode.ERROR, str(exc))
                         raise
 
-            return _async_wrapped
+            return cast(NodeFn, _async_wrapped)
+
+        sync_fn = cast(Callable[[Any], dict[str, Any]], fn)
 
         @functools.wraps(fn)
         def _sync_wrapped(state: Any) -> dict[str, Any]:
+            tracer = trace.get_tracer(TRACER_NAME)
             with tracer.start_as_current_span(
                 f"node.{agent_name}",
                 attributes={"wolfpack.agent_name": agent_name},
             ) as span:
                 attach_baggage_to_span(span)
                 try:
-                    result = fn(state)
+                    result = sync_fn(state)
                     span.set_attribute("wolfpack.status", result.get("status", "unknown"))
                     return result
                 except Exception as exc:
@@ -120,8 +124,8 @@ def traced_node(
                     span.set_status(trace.StatusCode.ERROR, str(exc))
                     raise
 
-        return _sync_wrapped
+        return cast(NodeFn, _sync_wrapped)
 
     if node_fn is not None:
         return _outer_wrapper(node_fn)
-    return _outer_wrapper
+    return cast(NodeFn, _outer_wrapper)
