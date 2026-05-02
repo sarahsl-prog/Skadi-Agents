@@ -138,31 +138,31 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** HIGH-14  
 **Status:** Keyword/semantic weights inverted
 
-- [ ] Line 82: Change to `alpha = 0.7 if modality == "keyword" else 0.3`
+- [x] Line 82: Change to `alpha = 0.7 if modality == "keyword" else 0.3`
 
 ### 4.3 Alert Deduplication — `src/wolfpack/observability/alert_manager.py`
 **Issues:** HIGH-15  
 **Status:** Dedup broken due to timestamp in hash
 
-- [ ] Lines 94-96: Exclude `timestamp` (and non-identity fields) from canonical hash
+- [x] Lines 94-96: Exclude `timestamp` (and non-identity fields) from canonical hash
 
 ### 4.4 Tracing Bootstrap — `src/wolfpack/observability/tracing.py`
 **Issues:** HIGH-16  
 **Status:** Tracer captured at decoration time; no-op if decorated before bootstrap
 
-- [ ] Line 86: Move `trace.get_tracer(TRACER_NAME)` inside wrapper functions
+- [x] Line 86: Move `trace.get_tracer(TRACER_NAME)` inside wrapper functions
 
 ### 4.5 LLM Timeout — `src/wolfpack/llm/providers.py`
 **Issues:** HIGH-17  
 **Status:** Config timeout ignored; default 5s used
 
-- [ ] Lines 11-30: Pass `cfg.request_timeout_s` to provider constructors and `httpx.Client(timeout=...)`
+- [x] Lines 11-30: Pass `cfg.request_timeout_s` to provider constructors and `httpx.Client(timeout=...)`
 
 ### 4.6 Watchdog Timezone — `src/wolfpack/orchestrator/watchdog.py`
 **Issues:** HIGH-11  
 **Status:** Crash on naive ISO strings
 
-- [ ] Lines 76-78: After parsing, force UTC: `if started_at.tzinfo is None: started_at = started_at.replace(tzinfo=UTC)`
+- [x] Lines 76-78: After parsing, force UTC: `if started_at.tzinfo is None: started_at = started_at.replace(tzinfo=UTC)`
 
 ---
 
@@ -172,38 +172,38 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-10, MED-17  
 **Status:** Budget leak on persistence failure; footgun defaults
 
-- [ ] `budget.py:84`: Change default `branches=0` to `branches=1` or add warning
-- [ ] `branches.py:54-55,81`: Wrap persistence in try/except; roll back consumed budget on failure
+- [x] `budget.py:84`: Change default `branches=0` to `branches=1` or add warning
+- [x] `branches.py:54-55,81`: Wrap persistence in try/except; roll back consumed budget on failure
 
 ### 5.2 Graph Construction — `src/wolfpack/orchestrator/graph.py`
 **Issues:** MED-14, MED-15, LOW-19, LOW-20  
 **Status:** Wrong NATS subject; missing validation; fire-and-forget publish
 
-- [ ] Line 204: Change `"hunt.task.tracker"` to `"hunt.task.alpha"` or `"hunt.task.dispatcher"`
-- [ ] Lines 192-193: Add `scribe is None` to validation check
-- [ ] Lines 34-35: Review routing when both confidences are None
-- [ ] Lines 124-136: Add error handling for NATS publish
+- [x] Line 204: Change `"hunt.task.tracker"` to `"hunt.task.alpha"` or `"hunt.task.dispatcher"`
+- [x] Lines 192-193: Add `scribe is None` to validation check
+- [x] Lines 34-35: Review routing when both confidences are None
+- [x] Lines 124-136: Add error handling for NATS publish
 
 ### 5.3 NATS Bus — `src/wolfpack/orchestrator/bus.py`
 **Issues:** MED-8, MED-9, LOW-15, LOW-16  
 **Status:** Silent errors; header overwrite; serialization failures
 
-- [ ] Lines 63-67: Catch `StreamAlreadyExistsError` specifically
-- [ ] Lines 97-99: Protect OTel headers from user overwrite
-- [ ] Lines 92-95: Handle non-serializable types in `json.dumps()`
-- [ ] Lines 143-148: Add `drain()` before `close()`
+- [x] Lines 63-67: Catch `StreamAlreadyExistsError` specifically
+- [x] Lines 97-99: Protect OTel headers from user overwrite
+- [x] Lines 92-95: Handle non-serializable types in `json.dumps()`
+- [x] Lines 143-148: Add `drain()` before `close()`
 
 ### 5.4 Dedup — `src/wolfpack/orchestrator/dedup.py`
 **Issues:** LOW-18  
 **Status:** Merged hypothesis inherits stale metadata
 
-- [ ] Lines 61-63: Reset `status` and `branch_id` on merged hypothesis
+- [x] Lines 61-63: Reset `status` and `branch_id` on merged hypothesis
 
 ### 5.5 Stubs — `src/wolfpack/orchestrator/stubs.py`
 **Issues:** MED-13  
 **Status:** Casing mismatch with tests
 
-- [ ] Line 93: Align with test expectations (see Priority 3.1)
+- [x] Line 93: Align with test expectations (see Priority 3.1)
 
 ---
 
@@ -213,38 +213,38 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-1, MED-5  
 **Status:** Silent pool failure; asyncio.run() in existing loop
 
-- [ ] Lines 70-73: Raise error or return error indicator when pool unavailable
-- [ ] Line 96: Use `asyncio.get_event_loop().run_until_complete()` or check for existing loop
+- [x] Lines 70-73: Raise error or return error indicator when pool unavailable
+- [x] Line 96: Use `asyncio.get_event_loop().run_until_complete()` or check for existing loop
 
 ### 6.2 Flanker — `src/wolfpack/agents/flanker.py`
 **Issues:** MED-3, MED-4, LOW-9, LOW-12, LOW-66  
 **Status:** No-op filtering; no circuit-breaker; unwired deps
 
-- [ ] Lines 211-215: Collect and filter case-level hypotheses properly
+- [x] Lines 211-215: Collect and filter case-level hypotheses properly
 - [ ] Line 279: Add `max_re_checks` config; enforce in graph router
 - [ ] Lines 33-44: Wire `FlankerDeps.rag` and `adapters` to tools
-- [ ] Line 131-134: Don't shadow feature flag parameter
-- [ ] Line 233: Fix branch_id fallback to reference actual branch
+- [x] Line 131-134: Don't shadow feature flag parameter
+- [x] Line 233: Fix branch_id fallback to reference actual branch
 
 ### 6.3 Tracker — `src/wolfpack/agents/tracker.py`
 **Issues:** LOW-10  
 **Status:** Deps never used to configure tools
 
-- [ ] Lines 68-79: Use `TrackerDeps` to configure agent tools
+- [x] Lines 68-79: Use `TrackerDeps` to configure agent tools
 
 ### 6.4 Closer — `src/wolfpack/agents/closer.py`
 **Issues:** LOW-11, LOW-6  
 **Status:** Fresh adapter instances per call; hardcoded placeholders
 
-- [ ] Lines 84-110: Cache adapter instances or accept as dependencies
+- [x] Lines 84-110: Cache adapter instances or accept as dependencies
 - [ ] Lines 99,158: Replace hardcoded Okta placeholder with config value
 
 ### 6.5 Scribe — `src/wolfpack/agents/scribe.py`
 **Issues:** LOW-1, LOW-7  
 **Status:** Unused allowlist; dropped agent_run_id
 
-- [ ] Line 16: Remove or use `SCRIBE_TOOL_ALLOWLIST`
-- [ ] Lines 49-67: Persist `agent_run_id` in timeline events
+- [x] Line 16: Remove or use `SCRIBE_TOOL_ALLOWLIST`
+- [x] Lines 49-67: Persist `agent_run_id` in timeline events
 
 ### 6.6 Policy — `src/wolfpack/agents/policy.py`
 **Issues:** LOW-8  
@@ -260,35 +260,35 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-36  
 **Status:** Multiple pool singletons
 
-- [ ] All three files: Use FastAPI DI to share single pool instance
+- [x] All three files: Use FastAPI DI to share single pool instance
 
 ### 7.2 Review Routes — `src/wolfpack/api/routes/review.py`
 **Issues:** MED-30, MED-31, MED-32  
 **Status:** No precondition checks; non-atomic ops; no idempotency
 
-- [ ] Lines 83-140: Add `WHERE status = 'review'` or validate status first
-- [ ] Lines 54-80: Wrap INSERT + UPDATE in transaction
-- [ ] Lines 83-140: Add idempotency keys or conditional UPDATEs
+- [x] Lines 83-140: Add `WHERE status = 'review'` or validate status first
+- [x] Lines 54-80: Wrap INSERT + UPDATE in transaction
+- [x] Lines 83-140: Add idempotency keys or conditional UPDATEs
 
 ### 7.3 Cases Routes — `src/wolfpack/api/routes/cases.py`
 **Issues:** MED-33  
 **Status:** Unvalidated limit/offset
 
-- [ ] Lines 33-34: Use `Query(50, ge=1, le=500)` and `Query(0, ge=0)`
+- [x] Lines 33-34: Use `Query(50, ge=1, le=500)` and `Query(0, ge=0)`
 
 ### 7.4 WebSocket — `src/wolfpack/api/routes/ws.py`
 **Issues:** MED-34, MED-35, LOW-34  
-**Status:** No heartbeat; no timeout; imports private token
+**Status:** DONE
 
-- [ ] Lines 44-53: Implement actual heartbeat with `asyncio.sleep(30)` or update docstring
-- [ ] Lines 29-36: Add `asyncio.wait_for(websocket.receive_text(), timeout=5.0)`
-- [ ] Line 14: Don't import private `_DEFAULT_TOKEN`
+- [x] Lines 44-53: Implement actual heartbeat with `asyncio.sleep(30)` or update docstring
+- [x] Lines 29-36: Add `asyncio.wait_for(websocket.receive_text(), timeout=5.0)`
+- [x] Line 14: Don't import private `_DEFAULT_TOKEN`
 
 ### 7.5 CORS — `src/wolfpack/api/app.py`
 **Issues:** MED-28  
-**Status:** Invalid CORS config
+**Status:** DONE
 
-- [ ] Lines 28-34: Set `allow_origins` to specific allowlist or remove `allow_credentials=True`
+- [x] Lines 28-34: Set `allow_origins` to specific allowlist or remove `allow_credentials=True`
 
 ---
 
@@ -296,33 +296,33 @@ These bugs cause crashes or completely broken functionality.
 
 ### 8.1 Alert Classes — `src/wolfpack/observability/alerts.py`
 **Issues:** MED-40, MED-41  
-**Status:** Severity mismatch; missing critical alert
+**Status:** DONE
 
-- [ ] Lines 142-168: Align `ReviewTimeoutEscalationAlert` spec and payload severity
-- [ ] Lines 204-217: Add `LedgerHashMismatchAlert` to `get_builtin_alerts()`
+- [x] Lines 142-168: Align `ReviewTimeoutEscalationAlert` spec and payload severity
+- [x] Lines 204-217: Add `LedgerHashMismatchAlert` to `get_builtin_alerts()`
 
 ### 8.2 Alert Manager — `src/wolfpack/observability/alert_manager.py`
 **Issues:** MED-43, MED-44, MED-45, LOW-49  
-**Status:** Hardcoded timeout; per-dispatch client; always-truthy condition; no backoff
+**Status:** DONE
 
-- [ ] Line 122: Use `settings.webhook_config.timeout_s`
-- [ ] Lines 116-123: Create client once in `__init__` or `start()`
-- [ ] Line 47: Check `settings.webhook_config.url` instead of instance
-- [ ] Lines 83-92: Add circuit breaker/backoff in error loop
+- [x] Line 122: Use `settings.webhook_config.timeout_s`
+- [x] Lines 116-123: Create client once in `__init__` or `start()`
+- [x] Line 47: Check `settings.webhook_config.url` instead of instance
+- [x] Lines 83-92: Add circuit breaker/backoff in error loop
 
 ### 8.3 Agent Instrumentation — `src/wolfpack/observability/agents.py`
 **Issues:** MED-42, MED-47, LOW-35, LOW-36  
-**Status:** Dead code; swallowed exceptions; blocking sync wrapper
+**Status:** DONE
 
-- [ ] Lines 152-181: Remove dead `_instrument_tools` or find correct Pydantic AI hook
-- [ ] Lines 143-149: Log warning before returning `None`
-- [ ] Lines 77-119: Make `traced_agent_run_sync` truly async or document blocking
+- [x] Lines 152-181: Remove dead `_instrument_tools` or find correct Pydantic AI hook
+- [x] Lines 143-149: Log warning before returning `None`
+- [x] Lines 77-119: Make `traced_agent_run_sync` truly async or document blocking
 
 ### 8.4 Logfire — `src/wolfpack/observability/logfire.py`
 **Issues:** MED-46  
-**Status:** No guard against pre-bootstrap call
+**Status:** DONE
 
-- [ ] Lines 13-22: Add check that global TracerProvider has been set
+- [x] Lines 13-22: Add check that global TracerProvider has been set
 
 ---
 

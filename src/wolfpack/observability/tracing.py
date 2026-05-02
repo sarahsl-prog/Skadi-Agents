@@ -36,6 +36,12 @@ def bootstrap_tracing(settings: Settings) -> TracerProvider:
     if _bootstrapped:
         return trace.get_tracer_provider()  # type: ignore[return-value]
 
+    # Defensive: if another path already set a real provider, reuse it.
+    existing = trace.get_tracer_provider()
+    if hasattr(existing, "resource"):
+        _bootstrapped = True
+        return existing  # type: ignore[return-value]
+
     resource = Resource.create(
         {
             "service.name": settings.otel.service_name,

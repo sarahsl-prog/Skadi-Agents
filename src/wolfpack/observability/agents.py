@@ -9,11 +9,14 @@ from __future__ import annotations
 
 from typing import Any
 
+import logging
+
 from opentelemetry import trace
 
 from wolfpack.observability.baggage import attach_baggage_to_span
 
 TRACER = trace.get_tracer("wolfpack")
+_LOGGER = logging.getLogger(__name__)
 
 
 async def traced_agent_run(
@@ -83,7 +86,13 @@ def traced_agent_run_sync(
     model_name: str | None = None,
     provider: str | None = None,
 ) -> Any:
-    """Synchronous variant of :func:`traced_agent_run`."""
+    """Synchronous variant of :func:`traced_agent_run`.
+
+    .. warning::
+       This function is **blocking** — it calls :meth:`agent.run_sync` inside
+       a synchronous OTel span. Do not invoke it from an async event loop
+       unless you wrap it with :func:`asyncio.to_thread`.
+    """
     if model_name is None:
         model_name = _infer_model_name(agent)
     if provider is None:
@@ -127,7 +136,7 @@ def traced_agent_run_sync(
 def _infer_model_name(agent: Any) -> str:
     """Best-effort extraction of the model name from a Pydantic AI agent."""
     try:
-        return str(agent.model.model_name)  # type: ignore[union-attr]
+        return str(agent.model.model_name)
     except Exception:
         return "unknown"
 
@@ -135,7 +144,7 @@ def _infer_model_name(agent: Any) -> str:
 def _infer_provider(agent: Any) -> str:
     """Best-effort extraction of the provider name from a Pydantic AI agent."""
     try:
-        return str(agent.model.provider)  # type: ignore[union-attr]
+        return str(agent.model.provider)
     except Exception:
         return "unknown"
 
@@ -145,37 +154,18 @@ def _extract_token_count(result: Any) -> int | None:
     try:
         usage = result.usage()
         return getattr(usage, "prompt_tokens", 0) + getattr(usage, "completion_tokens", 0)
-    except Exception:
+    except Exception as exc:
+        _LOGGER.warning("Failed to extract token count: %s", exc)
         return None
 
 
 def _instrument_tools(agent: Any, span: trace.Span) -> None:
-    """Attach a tool-call listener to the agent so every tool call becomes a span event.
+    """Stub for future Pydantic AI tool-call instrumentation.
 
-    Only logs the tool *name* and a deterministic input hash — never raw content.
+    Current Pydantic AI versions do not expose a stable tool-call hook.
+    When one becomes available, attach a listener here that records
+    ``tool.call`` span events with the tool name and a deterministic
+    input hash — never raw content.
     """
-    try:
-        original_run = agent.run
-        original_run_sync = agent.run_sync
-    except Exception:
-        return
-
-    import hashlib
-    import json
-
-    def _make_listener(fn: Any) -> Any:
-        def _listener(tool: Any) -> None:
-            name = getattr(tool, "__name__", str(tool))
-            try:
-                payload_hash = hashlib.sha256(
-                    json.dumps(tool.tool_call.args, sort_keys=True).encode()
-                ).hexdigest()[:16]
-            except Exception:
-                payload_hash = "unknown"
-            span.add_event("tool.call", {"tool.name": name, "tool.input_hash": payload_hash})
-
-        return _listener
-
-    # If the agent exposes a tool-callback mechanism (future pydantic-ai versions)
-    if hasattr(agent, "on_tool_call"):
-        agent.on_tool_call(_make_listener(agent))  # type: ignore[call-overload]
+    # TODO: wire up when Pydantic AI exposes on_tool_call or similar hook.
+    pass
