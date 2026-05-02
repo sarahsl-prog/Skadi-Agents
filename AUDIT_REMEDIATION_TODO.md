@@ -116,12 +116,12 @@ These bugs cause crashes or completely broken functionality.
 
 ### 3.4 Persistence Layer — `src/wolfpack/schemas/persistence.py`
 **Issues:** HIGH-4, MED-63, MED-64  
-**Status:** Incomplete objects returned; fabricated timestamps
+**Status:** ✅ DONE — Incomplete objects returned; fabricated timestamps
 
-- [ ] Lines 84-107: Implement `get_full_case()` that loads branches, hypotheses, evidence_refs
-- [ ] Lines 164-190: Populate branch-level `entities`, `hypotheses`, `evidence_refs`
-- [ ] Add `updated_at` column to `branches` table or remove field from model
-- [ ] Update API route `cases.py:75` to use `get_full_case()`
+- [x] Lines 84-107: Implement `get_full_case()` that loads branches, hypotheses, evidence_refs
+- [x] Lines 164-190: Populate branch-level `entities`, `hypotheses`, `evidence_refs`
+- [x] Add `updated_at` column to `branches` table or remove field from model (handled gracefully)
+- [x] Update API route `cases.py:75` to use `get_full_case()`
 
 ---
 

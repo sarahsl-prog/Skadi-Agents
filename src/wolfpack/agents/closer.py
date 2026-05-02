@@ -14,7 +14,14 @@ from wolfpack.adapters.tools import AdapterDeps
 from wolfpack.agents.policy import PolicyEngine
 from wolfpack.llm.factory import get_model
 from wolfpack.observability.agents import traced_agent_run
-from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
+from wolfpack.observability.rag_tools import traced_retrieve
+from wolfpack.rag.tools import (
+    RAGDeps,
+    RAGResult,
+    _build_answer,
+    case_history_tool,
+    threat_intel_tool,
+)
 from wolfpack.schemas.agents.closer import CloserInput, CloserOutput
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.confidence import Confidence
@@ -81,29 +88,88 @@ Rules:
 # ------------------------------------------------------------------ #
 
 
-def _build_tools(feature_flags: dict[str, bool] | None = None) -> list[Any]:
-    """Build the tool list for Closer (read-only Tier-1 adapters only)."""
-    from wolfpack.adapters.tools import build_adapter_tools
-    from wolfpack.adapters import (
-        CrowdStrikeAdapter,
-        FirewallAdapter,
-        OktaAdapter,
-        SyslogAdapter,
-        WindowsEventLogAdapter,
-    )
+def _build_tools(
+    deps: CloserDeps | None = None,
+    feature_flags: dict[str, bool] | None = None,
+) -> list[Any]:
+    """Build the tool list for Closer (read-only Tier-1 adapters only).
 
-    adapter_tools = build_adapter_tools(
-        [
-            SyslogAdapter(),
-            WindowsEventLogAdapter(),
-            OktaAdapter(base_url="https://example.okta.com"),
-            CrowdStrikeAdapter(),
-            FirewallAdapter(),
-        ],
-        feature_flags=feature_flags or {},
-    )
+    When *deps* provides ``rag`` or ``adapters``, those are wired into
+    the tools instead of creating fresh instances.
+    """
+    tools: list[Any] = []
 
-    tools: list[Any] = [threat_intel_tool, case_history_tool]
+    # ------------------------------------------------------------------ #
+    # RAG tools — wire deps.rag when available
+    # ------------------------------------------------------------------ #
+    rag = deps.rag if deps else None
+    if rag is not None:
+        async def _threat_intel(query: str, top_k: int = 5) -> Any:
+            pipeline = rag.threat_intel
+            if pipeline is None:
+                return RAGResult(source="threat_intel", answer="")
+            docs = await traced_retrieve("threat_intel", pipeline.retrieve)(
+                query, top_k=top_k
+            )
+            return RAGResult(
+                source="threat_intel",
+                documents=docs,
+                answer=_build_answer(docs),
+            )
+
+        _threat_intel.__name__ = "threat_intel_tool"
+        _threat_intel.__doc__ = threat_intel_tool.__doc__
+        tools.append(_threat_intel)
+
+        async def _case_history(query: str, top_k: int = 5) -> Any:
+            pipeline = rag.case_history
+            if pipeline is None:
+                return RAGResult(source="case_history", answer="")
+            docs = await traced_retrieve("case_history", pipeline.retrieve)(
+                query, top_k=top_k
+            )
+            return RAGResult(
+                source="case_history",
+                documents=docs,
+                answer=_build_answer(docs),
+            )
+
+        _case_history.__name__ = "case_history_tool"
+        _case_history.__doc__ = case_history_tool.__doc__
+        tools.append(_case_history)
+    else:
+        tools.extend([threat_intel_tool, case_history_tool])
+
+    # ------------------------------------------------------------------ #
+    # Adapter tools — wire deps.adapters when available
+    # ------------------------------------------------------------------ #
+    adapter_deps = deps.adapters if deps else None
+    if adapter_deps is not None and adapter_deps.adapters:
+        adapter_tools = build_adapter_tools(
+            list(adapter_deps.adapters.values()),
+            feature_flags=feature_flags or {},
+        )
+    else:
+        from wolfpack.adapters.tools import build_adapter_tools
+        from wolfpack.adapters import (
+            CrowdStrikeAdapter,
+            FirewallAdapter,
+            OktaAdapter,
+            SyslogAdapter,
+            WindowsEventLogAdapter,
+        )
+
+        adapter_tools = build_adapter_tools(
+            [
+                SyslogAdapter(),
+                WindowsEventLogAdapter(),
+                OktaAdapter(base_url="https://example.okta.com"),
+                CrowdStrikeAdapter(),
+                FirewallAdapter(),
+            ],
+            feature_flags=feature_flags or {},
+        )
+
     for name, fn in adapter_tools.items():
         if name in CLOSER_TOOL_ALLOWLIST:
             tools.append(fn)
@@ -118,6 +184,7 @@ def _build_tools(feature_flags: dict[str, bool] | None = None) -> list[Any]:
 def _build_closer_agent(
     cfg: Any | None = None,
     model: Any | None = None,
+    deps: CloserDeps | None = None,
     feature_flags: dict[str, bool] | None = None,
 ) -> Agent[Any, CloserOutput]:
     """Build the Closer Pydantic AI agent."""
@@ -130,7 +197,7 @@ def _build_closer_agent(
             )
         model = get_model(cfg)
 
-    tools = _build_tools(feature_flags=feature_flags)
+    tools = _build_tools(deps=deps, feature_flags=feature_flags)
 
     return Agent(
         model=model,
@@ -171,7 +238,7 @@ async def run_closer(
         evidence_refs=evidence,
     )
 
-    agent = _build_closer_agent(model=model, feature_flags=feature_flags)
+    agent = _build_closer_agent(model=model, deps=deps, feature_flags=feature_flags)
 
     hyp_reprs = []
     for h in closer_input.hypotheses or []:
