@@ -117,7 +117,7 @@ def _wrap_with_nats(
             )
 
     async def _async_wrapped(state: CaseState) -> dict[str, Any]:
-        result = node(state)
+        result = await node(state)
         await _publish_safe(subject, result)
         return result  # type: ignore[return-value]
 
@@ -132,8 +132,7 @@ def _wrap_with_nats(
             asyncio.run(_publish_safe(subject, result))
         return result  # type: ignore[return-value]
 
-    # Prefer sync wrapper to keep graph topology simple in Phase 2.
-    return _sync_wrapped
+    return _async_wrapped if asyncio.iscoroutinefunction(node) else _sync_wrapped
 
 
 def build_hunt_graph(
