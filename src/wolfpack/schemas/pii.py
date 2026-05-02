@@ -29,7 +29,10 @@ async def create_pii_salt(pool: PersistencePool, case_id: str) -> bytes:
         )
     finally:
         await pool.release(conn)
-    return salt
+    # Re-fetch to get the persisted salt (handles race conditions where
+    # another concurrent call created the salt first).
+    persisted = await get_pii_salt(pool, case_id)
+    return persisted if persisted is not None else salt
 
 
 async def get_pii_salt(pool: PersistencePool, case_id: str) -> bytes | None:
@@ -55,10 +58,11 @@ async def pseudonymize(
 ) -> str:
     """Return a deterministic token for *identifier*.
 
-    The token format is ``{identifier_type}_{6_hex_chars}``.
+    The token format is ``{identifier_type}_{12_hex_chars}``.
     If no salt exists for *case_id* one is created automatically.
-    The original value is stored in ``wolfpack.pii_mappings`` for break-glass
-    reverse lookup.
+    The original value is encrypted with a per-case DEK derived from the
+    salt and stored in ``wolfpack.pii_mappings`` for break-glass reverse
+    lookup.
     """
     salt = await get_pii_salt(pool, case_id)
     if salt is None:
@@ -69,7 +73,19 @@ async def pseudonymize(
         f"{identifier_type}:{identifier}".encode(),
         hashlib.sha256,
     ).hexdigest()
-    token = f"{identifier_type}_{digest[:6]}"
+    token = f"{identifier_type}_{digest[:12]}"
+
+    # Encrypt original_value before storage using AES-256-GCM with a
+    # separate derived key (different HMAC context from token derivation).
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    enc_key = hmac.new(salt, b"pii-encryption-v1", hashlib.sha256).digest()
+    nonce = secrets.token_bytes(12)  # 96-bit nonce for AES-GCM
+    aesgcm = AESGCM(enc_key)
+    # AAD: case_id binds ciphertext to this specific case
+    encrypted_value = aesgcm.encrypt(nonce, identifier.encode(), case_id.encode())
+    # Store as binary: nonce (12 bytes) | ciphertext | tag (16 bytes)
+    stored_value = nonce + encrypted_value
 
     conn = await pool.acquire()
     try:
@@ -81,7 +97,7 @@ async def pseudonymize(
             """,
             case_id,
             token,
-            identifier,
+            stored_value,
             identifier_type,
         )
     finally:
@@ -116,7 +132,17 @@ async def depseudonymize(
     """
     conn = await pool.acquire()
     try:
-        # 1. Write audit trail first — if this fails, block everything.
+        # 1. Check token exists before writing audit trail.
+        row = await conn.fetchrow(
+            "SELECT original_value FROM wolfpack.pii_mappings "
+            "WHERE case_id = $1 AND token = $2",
+            case_id,
+            token,
+        )
+        if row is None:
+            return None
+
+        # 2. Write audit trail — if this fails, block everything.
         try:
             await conn.execute(
                 """
@@ -133,15 +159,18 @@ async def depseudonymize(
                 "Audit write failed — depseudonymization blocked"
             ) from exc
 
-        # 2. Reverse lookup
-        row = await conn.fetchrow(
-            "SELECT original_value FROM wolfpack.pii_mappings "
-            "WHERE case_id = $1 AND token = $2",
-            case_id,
-            token,
-        )
-        if row is None:
-            return None
-        return str(row["original_value"])
+        # 3. Decrypt original_value
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+        stored_value = row["original_value"]
+        salt = await get_pii_salt(pool, case_id)
+        if salt is None:
+            raise BreakGlassError("Salt not found for case")
+        enc_key = hmac.new(salt, b"pii-encryption-v1", hashlib.sha256).digest()
+        nonce = stored_value[:12]
+        ciphertext = stored_value[12:]
+        aesgcm = AESGCM(enc_key)
+        identifier = aesgcm.decrypt(nonce, ciphertext, case_id.encode()).decode()
+        return identifier
     finally:
         await pool.release(conn)

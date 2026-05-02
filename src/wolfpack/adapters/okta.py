@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -52,11 +53,15 @@ class OktaAdapter(TelemetrySource):
         if entity.type == "user":
             params["q"] = entity.value
         elif entity.type == "ip":
-            params["filter"] = f"client.ipAddress eq '{entity.value}'"
+            # URL-encode entity value to prevent FQL injection
+            encoded_value = quote(entity.value, safe="")
+            params["filter"] = f"client.ipAddress eq '{encoded_value}'"
 
         if filters and "event_type" in filters:
             evt = filters["event_type"]
-            params["filter"] = params.get("filter", "") + f" and eventType eq '{evt}'"
+            # URL-encode event type to prevent filter injection
+            encoded_evt = quote(evt, safe="")
+            params["filter"] = (params.get("filter", "") or "") + f" and eventType eq '{encoded_evt}'"
 
         url: str | None = f"{self._base_url}/api/v1/logs"
 

@@ -29,15 +29,15 @@ def _get_pool() -> PersistencePool:
 async def show_raw_data(
     case_id: str,
     field: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,  # RequireAuth is the validated token — use as analyst identifier
 ) -> dict[str, Any]:
     """Rehydrate a pseudonymized token for the current analyst session.
 
     Every invocation writes to ``breakglass_audit`` before returning.
     """
     pool = _get_pool()
-    # In a real deployment the analyst_id comes from the auth token.
-    analyst_id = "analyst_session"
+    # The validated API token serves as the analyst identifier for audit.
+    analyst_id = auth
     raw = await show_raw(pool, case_id, analyst_id, field)
     if raw is None:
         raise HTTPException(

@@ -7,6 +7,7 @@ pgvector similarity search, backed by Ollama for embeddings.
 from __future__ import annotations
 
 import json
+import re
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -106,13 +107,26 @@ class PGVectorStore:
     search.  The schema is namespaced per pipeline via *table_name*.
     """
 
+    # Allowlist of safe table name characters: alphanumeric and underscore only
+    _TABLE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+    # Allowlist of safe filter key characters: alphanumeric, underscore, hyphen, dot
+    _FILTER_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.\-]*$")
+    _ALLOWED_TABLES: frozenset[str] = frozenset()
+
     def __init__(
         self,
         pool: asyncpg.Pool,
         table_name: str,
         vector_dim: int = 768,
         embedder: OllamaEmbedder | None = None,
+        allowed_tables: frozenset[str] | None = None,
     ) -> None:
+        if allowed_tables is not None:
+            PGVectorStore._ALLOWED_TABLES = allowed_tables
+        if PGVectorStore._ALLOWED_TABLES and table_name not in PGVectorStore._ALLOWED_TABLES:
+            raise ValueError(f"table_name {table_name!r} not in allowlist")
+        if not self._TABLE_NAME_RE.match(table_name):
+            raise ValueError(f"table_name contains invalid characters: {table_name!r}")
         self._pool = pool
         self._table = table_name
         self._vector_dim = vector_dim
@@ -186,6 +200,8 @@ class PGVectorStore:
         if filters:
             conditions = []
             for key, value in filters.items():
+                if not self._FILTER_KEY_RE.match(key):
+                    raise ValueError(f"Invalid filter key: {key!r}")
                 conditions.append(f"metadata->>'{key}' = ${len(params) + 1}")
                 params.append(value)
             where_clause = "WHERE " + " AND ".join(conditions)
@@ -243,6 +259,8 @@ class PGVectorStore:
         if filters:
             conditions = []
             for key, value in filters.items():
+                if not self._FILTER_KEY_RE.match(key):
+                    raise ValueError(f"Invalid filter key: {key!r}")
                 conditions.append(f"metadata->>'{key}' = ${len(params) + 1}")
                 params.append(value)
             where_clause = "WHERE " + " AND ".join(conditions)

@@ -7,11 +7,12 @@ analyst clients.
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from wolfpack.api.auth import _DEFAULT_TOKEN
+_DEFAULT_TOKEN = os.environ.get("WOLFPACK_API_TOKEN", "dev-token-do-not-use-in-production")
 
 router = APIRouter()
 

@@ -7,6 +7,7 @@ and pagination.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -111,15 +112,18 @@ class CrowdStrikeAdapter(TelemetrySource):
             "sort": "last_behavior|desc",
         }
         # Filter by entity value (AID for hosts, external IP, etc.)
+        # URL-encode entity values to prevent FQL injection
+        encoded_value = quote(entity.value, safe="")
         if entity.type == "host":
-            params["filter"] = f"device.hostname:'{entity.value}'"
+            params["filter"] = f"device.hostname:'{encoded_value}'"
         elif entity.type == "ip":
-            params["filter"] = f"external_ip:'{entity.value}'"
+            params["filter"] = f"external_ip:'{encoded_value}'"
         else:
             params["q"] = entity.value
 
         if filters and "severity" in filters:
             sev = filters["severity"]
-            params["filter"] = params.get("filter", "") + f"+max_severity_displayname:'{sev}'"
+            encoded_sev = quote(sev, safe="")
+            params["filter"] = (params.get("filter", "") or "") + f"+max_severity_displayname:'{encoded_sev}'"
 
         return params
