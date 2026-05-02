@@ -121,6 +121,7 @@ Rules:
 def _build_tracker_agent(
     cfg: Any | None = None,
     model: Any | None = None,
+    deps: TrackerDeps | None = None,
 ) -> Agent[Any, TrackerOutput]:
     """Build the Tracker Pydantic AI agent with tools and system prompt."""
     if model is None:
@@ -132,18 +133,58 @@ def _build_tracker_agent(
             )
         model = get_model(cfg)
 
-    rag_tools: list[Any] = [
-        threat_intel_tool,
-        case_history_tool,
-    ]
-    adapter_tools: list[Any] = []
-    _validate_tools(rag_tools)
+    tools: list[Any] = []
+
+    # Wire RAG tools via deps when available
+    rag = deps.rag if deps else None
+    if rag is not None:
+        from wolfpack.observability.rag_tools import traced_retrieve
+        from wolfpack.rag.tools import RAGResult, _build_answer
+
+        async def _threat_intel(query: str, top_k: int = 5) -> Any:
+            pipeline = rag.threat_intel
+            if pipeline is None:
+                return RAGResult(source="threat_intel", answer="")
+            docs = await traced_retrieve("threat_intel", pipeline.retrieve)(query, top_k=top_k)
+            return RAGResult(source="threat_intel", documents=docs, answer=_build_answer(docs))
+
+        _threat_intel.__name__ = "threat_intel_tool"
+        _threat_intel.__doc__ = threat_intel_tool.__doc__
+        tools.append(_threat_intel)
+
+        async def _case_history(query: str, top_k: int = 5) -> Any:
+            pipeline = rag.case_history
+            if pipeline is None:
+                return RAGResult(source="case_history", answer="")
+            docs = await traced_retrieve("case_history", pipeline.retrieve)(query, top_k=top_k)
+            return RAGResult(source="case_history", documents=docs, answer=_build_answer(docs))
+
+        _case_history.__name__ = "case_history_tool"
+        _case_history.__doc__ = case_history_tool.__doc__
+        tools.append(_case_history)
+    else:
+        tools.extend([threat_intel_tool, case_history_tool])
+
+    # Wire adapter tools via deps when available
+    adapter_deps = deps.adapters if deps else None
+    if adapter_deps is not None and adapter_deps.adapters:
+        from wolfpack.adapters.tools import build_adapter_tools
+
+        adapter_tools = build_adapter_tools(
+            list(adapter_deps.adapters.values()),
+            feature_flags={},
+        )
+        for name, fn in adapter_tools.items():
+            if name in TRACKER_TOOL_ALLOWLIST:
+                tools.append(fn)
+
+    _validate_tools(tools)
 
     agent = Agent(
         model=model,
         output_type=TrackerOutput,
         system_prompt=_SYSTEM_PROMPT,
-        tools=rag_tools + adapter_tools,
+        tools=tools,
     )
     return agent
 
@@ -190,7 +231,7 @@ async def run_tracker(
         seed_description=str(seed.raw_payload),
     )
 
-    agent = _build_tracker_agent(model=model)
+    agent = _build_tracker_agent(model=model, deps=deps)
     result = await traced_agent_run(
         "tracker",
         agent,

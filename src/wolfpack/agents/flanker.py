@@ -128,7 +128,7 @@ def _build_flanker_agent(
     canonical = Settings().feature_flags
     caller_flags = feature_flags or {}
     # A caller may only *disable* an adapter; enabling requires config.
-    feature_flags = {
+    effective_flags = {
         **canonical,
         **{k: v for k, v in caller_flags.items() if v is False},
     }
@@ -163,7 +163,7 @@ def _build_flanker_agent(
         ProxySource(),
         CloudTrailSource(),
     ]
-    adapter_tools_map = build_adapter_tools(all_adapters, feature_flags=feature_flags)
+    adapter_tools_map = build_adapter_tools(all_adapters, feature_flags=effective_flags)
     adapter_tools = list(adapter_tools_map.values())
 
     all_tools = rag_tools + adapter_tools
@@ -208,11 +208,13 @@ async def run_flanker(
     if state.branches:
         for branch in state.branches:
             entities.extend(branch.entities)
+
+    # Collect case-level hypotheses (those not tied to a specific branch)
+    case_level_hypotheses = []
     if state.hypotheses:
         for hyp in state.hypotheses:
-            if hyp.branch_id:
-                # branch-level hypothesis; skip for case-level flanker
-                pass
+            if not hyp.branch_id:
+                case_level_hypotheses.append(hyp)
 
     # Deduplicate entities by value
     seen = set()
@@ -230,9 +232,9 @@ async def run_flanker(
 
     flanker_input = FlankerInput(
         case_id=state.case_id,
-        branch_id=state.branches[0].branch_id if state.branches else state.case_id,
+        branch_id=state.branches[-1].branch_id if state.branches else "",
         entities=unique_entities,
-        hypotheses=state.hypotheses,
+        hypotheses=case_level_hypotheses,
     )
 
     agent = _build_flanker_agent(model=model, feature_flags=feature_flags)
