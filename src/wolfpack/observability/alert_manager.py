@@ -37,7 +37,7 @@ class AlertManager:
         settings: Settings | None = None,
         cooldown_seconds: float = 300.0,
         poll_interval_seconds: float = 60.0,
-        monitors: list | None = None,
+        monitors: list[Any] | None = None,
         webhook_url: str | None = None,
     ) -> None:
         self._cooldown = timedelta(seconds=cooldown_seconds)
@@ -91,8 +91,16 @@ class AlertManager:
                     span.set_status(trace.StatusCode.ERROR, str(exc))
             await asyncio.sleep(self._poll_interval)
 
+    _DEDUP_EXCLUDE: frozenset[str] = frozenset(
+        {"timestamp", "fired_at", "dispatched_at", "seq", "id"}
+    )
+
     def _alert_key(self, alert: dict[str, Any]) -> str:
-        canonical = json.dumps(alert, sort_keys=True)
+        """Build a canonical hash that excludes volatile / non-identity fields."""
+        filtered = {
+            k: v for k, v in alert.items() if k not in self._DEDUP_EXCLUDE
+        }
+        canonical = json.dumps(filtered, sort_keys=True, default=str)
         return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
     def _should_fire(self, alert: dict[str, Any]) -> bool:
