@@ -16,12 +16,11 @@
     "--cap-add=SETUID",
     "--cap-add=SETGID",
     "--security-opt=no-new-privileges:true",  // no priv escalation ever
-    "--security-opt=seccomp=.devcontainer/security-profile.json",
     "--pids-limit=200",        // stop fork bombs (AI code is creative)
     "--memory=4g",             // 4GB RAM ceiling
     "--memory-swap=4g",        // no swap escape hatch
     "--cpus=2",                // 2 CPU cores max
-    "--read-only",             // read-only root filesystem
+    // "--read-only",             // read-only root filesystem
     "--tmpfs=/tmp:size=512m",  // writable /tmp only, 512MB
     "--network=bridge"         // isolate from host network
   ],
@@ -73,7 +72,6 @@
 
   // ── Remote user ────────────────────────────────────────────────────────
   "remoteUser": "devuser",
-  "updateRemoteUserUID": true,
 
   // ── Forwarded ports ────────────────────────────────────────────────────
   "forwardPorts": [8000, 8888],  // FastAPI + Jupyter if needed

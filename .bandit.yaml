@@ -1,0 +1,4 @@
+targets: [src]
+recursive: true
+severity: medium
+confidence: medium
