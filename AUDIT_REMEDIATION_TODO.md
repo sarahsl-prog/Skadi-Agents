@@ -524,18 +524,18 @@ These bugs cause crashes or completely broken functionality.
 
 ### 13.1 LLM — `src/wolfpack/llm/providers.py`, `factory.py`
 **Issues:** LOW-50, LOW-51  
-**Status:** Fragile coupling; ignored flag
+**Status:** Deferred
 
-- [ ] `providers.py:11-20`: Use `hosted` flag in construction
-- [ ] `factory.py:23`: Decouple provider types
+- [ ] `providers.py:11-20`: Use `hosted` flag in construction (needs architectural decision on how hosted flag changes provider behavior)
+- [ ] `factory.py:23`: Decouple provider types (deferred — current coupling is minimal)
 
 ### 13.2 Tracing — `src/wolfpack/observability/tracing.py`
 **Issues:** LOW-39, LOW-47, LOW-48  
-**Status:** Non-thread-safe flag; no reset; fragile decorator
+**Status:** DONE
 
-- [ ] Line 23: Make `_bootstrapped` thread-safe
-- [ ] Line 23: Add reset mechanism
-- [ ] Lines 66-69: Make decorator robust without parentheses
+- [x] Line 23: Make `_bootstrapped` thread-safe via `threading.Lock`
+- [x] Line 23: Add `reset_tracing()` mechanism
+- [x] Lines 66-69: Make `traced_node` decorator robust without parentheses
 
 ### 13.3 NATS Propagation — `src/wolfpack/observability/nats_propagation.py`
 **Issues:** (Test gap)  
@@ -548,11 +548,11 @@ These bugs cause crashes or completely broken functionality.
 ## Priority 14: Low Severity Cleanup
 
 ### 14.1 Dead Code/Unused
-- [ ] `agents/scribe.py:16`: Remove unused `SCRIBE_TOOL_ALLOWLIST`
-- [ ] `schemas/agents/alpha.py:9-16`: Remove unused `AlphaInput`
+- [x] `agents/scribe.py:16`: Remove unused `SCRIBE_TOOL_ALLOWLIST`
+- [x] `schemas/agents/alpha.py:9-16`: Remove unused `AlphaInput`
 
 ### 14.2 Import Cleanup
-- [ ] `processing/pii_pipeline.py:48`: Move `from wolfpack.schemas.entity import Entity` to module level
+- [x] `processing/pii_pipeline.py:48`: Move `from wolfpack.schemas.entity import Entity` to module level
 
 ### 14.3 All Other LOW Issues (LOW-1 through LOW-52 not yet addressed)
 - [ ] Review and fix remaining low-severity items
@@ -565,36 +565,36 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** D-1, D-2, D-3, D-4, D-5  
 **Status:** Subject names, table schemas mismatched
 
-- [ ] Lines 76-79: Update NATS subjects to match code (`hunt.task.*`, etc.)
-- [ ] Lines 57-64: Update `cases` table schema (JSONB `seed`, no `seed_type`)
-- [ ] Lines 61: Update `pii_store` to `pii_salts`/`pii_mappings`
-- [ ] Lines 59: Update `evidence_ledger` columns (`content`, `content_hash`)
-- [ ] Lines 65: Document `retry_count`/`last_error` columns
+- [x] Lines 76-79: Update NATS subjects to match code (`hunt.task.*`, etc.)
+- [x] Lines 57-64: Update `cases` table schema (JSONB `seed`, no `seed_type`)
+- [x] Lines 61: Update `pii_store` to `pii_salts`/`pii_mappings`
+- [x] Lines 59: Update `evidence_ledger` columns (`content`, `content_hash`)
+- [x] Lines 65: Document `retry_count`/`last_error` columns
 
 ### 15.2 Security Docs — `docs/security/threat_model.md`
 **Issues:** D-6, D-7  
 **Status:** Wrong path; outdated timeout claim
 
-- [ ] Line 154: Update path to `wolfpack.schemas.ledger.verify_chain()`
-- [ ] Lines 148-153: Remove claim; test exists
+- [x] Line 154: Update path to `wolfpack.schemas.ledger.verify_chain()`
+- [x] Lines 148-153: Remove claim; test exists
 
 ### 15.3 Configuration Docs — `docs/runbook/configuration.md`
 **Issues:** D-8  
 **Status:** Env var docs incomplete
 
-- [ ] Lines 68-73: Document `LEARNING__*` env vars
+- [x] Lines 68-73: Document `LEARNING__*` env vars
 
 ### 15.4 Environment — `.env.example`
 **Issues:** D-9  
 **Status:** Missing valid config fields
 
-- [ ] Add `LEARNING__*`, `BRANCH_BUDGET__*`, `OTEL__SERVICE_NAMESPACE`
+- [x] Add `LEARNING__*`, `BRANCH_BUDGET__*`, `OTEL__SERVICE_NAMESPACE`
 
 ### 15.5 Docker Compose — `docker-compose.yml`
 **Issues:** D-10  
 **Status:** MLflow database not created
 
-- [ ] Line 83: Add `mlflow` database to postgres init script
+- [x] Line 83: Add `mlflow` database to postgres init script
 
 ---
 

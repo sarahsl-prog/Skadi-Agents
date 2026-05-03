@@ -113,7 +113,7 @@ OTel Collector → MLflow, Ollama.
 - **Current Mitigation**:
   - The ledger uses a Postgres trigger (`compute_ledger_hash`) to compute a
     SHA-256 content hash and chain `prev_hash` on every insert.
-  - `verify_chain()` recomputes hashes and validates linkage.
+  - `wolfpack.schemas.ledger.verify_chain()` recomputes hashes and validates linkage.
   - The hash chain is monotonic; entries can only be appended, never updated
     or reordered (no `UPDATE` or `DELETE` paths on the ledger table).
 - **Residual Risk**: A superuser (`postgres` role) can drop the trigger or
@@ -146,11 +146,10 @@ OTel Collector → MLflow, Ollama.
   - The graph only proceeds to `END` when `review_decision` is explicitly set
     by the review node.
 - **Residual Risk**: If the review node's timeout logic has a race condition,
-  a case could be double-processed. No formal timeout test exists for the
-  review node in the graph.
-- **Recommendation**: Add an idempotency key to review transitions. Write a
-  dedicated integration test that simulates timeout expiry and verifies the
-  escalation webhook payload.
+  a case could be double-processed.
+- **Recommendation**: Add an idempotency key to review transitions. The
+  integration test `tests/integration/test_review_timeout.py` simulates
+  timeout expiry and verifies the escalation webhook payload.
 
 ## Attack Surface Summary
 

@@ -57,8 +57,8 @@ When `DEPLOYMENT_MODE=on_prem_airgapped`:
 
 | Field | `.env` Variable | Default | Description |
 |---|---|---|---|
-| `max_depth` | *(nested in `Settings`)* | `3` | Maximum Flanker recursion depth per case |
-| `max_branches_per_case` | *(nested in `Settings`)* | `10` | Maximum branches allowed per case |
+| `max_depth` | `BRANCH_BUDGET__MAX_DEPTH` | `3` | Maximum Flanker recursion depth per case |
+| `max_branches_per_case` | `BRANCH_BUDGET__MAX_BRANCHES_PER_CASE` | `10` | Maximum branches allowed per case |
 
 > Token and tool budgets per branch are reserved for V2 and not yet enforced.
 
@@ -66,11 +66,11 @@ When `DEPLOYMENT_MODE=on_prem_airgapped`:
 
 | Field | `.env` Variable | Default | Description |
 |---|---|---|---|
-| `schedule_minutes` | *(nested in `Settings`)* | `5` | How often the learning worker wakes up |
-| `batch_size` | *(nested in `Settings`)* | `50` | Cases to ingest per worker run |
-| `retry_limit` | *(nested in `Settings`)* | `3` | Max retries per case before dead-letter |
-| `min_confidence` | *(nested in `Settings`)* | `3` | Only ingest cases with confidence ≥ this threshold |
-| `enable_worker` | *(nested in `Settings`)* | `true` | Set `false` to disable the background worker |
+| `schedule_minutes` | `LEARNING__SCHEDULE_MINUTES` | `5` | How often the learning worker wakes up |
+| `batch_size` | `LEARNING__BATCH_SIZE` | `50` | Cases to ingest per worker run |
+| `retry_limit` | `LEARNING__RETRY_LIMIT` | `3` | Max retries per case before dead-letter |
+| `min_confidence` | `LEARNING__MIN_CONFIDENCE` | `3` | Only ingest cases with confidence ≥ this threshold |
+| `enable_worker` | `LEARNING__ENABLE_WORKER` | `true` | Set `false` to disable the background worker |
 
 ## Alert Webhook (`webhook_config.*`)
 
