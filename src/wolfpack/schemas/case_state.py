@@ -104,7 +104,9 @@ class CaseState(BaseModel):
         Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] | None
     ) = Field(
         default=None,
-        description="Closer verdict: MALICIOUS, BENIGN, INCONCLUSIVE, NEEDS_MORE_INFO, or SUSPICIOUS.",
+        description=(
+            "Closer verdict: MALICIOUS, BENIGN, INCONCLUSIVE, NEEDS_MORE_INFO, or SUSPICIOUS."
+        ),
     )
     overall_confidence: Confidence | None = Field(
         default=None,

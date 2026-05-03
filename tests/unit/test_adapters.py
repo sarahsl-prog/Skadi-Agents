@@ -290,7 +290,7 @@ class TestZeekSuricataAdapter:
                 f'{{"_path":"conn","ts":{ts},"id.orig_h":"192.0.2.1","id.resp_h":"93.184.216.34","id.orig_p":54321,"id.resp_p":443,"proto":"tcp","conn_state":"SF"}}\n'
             )
             f.write(
-                f'{{"_path":"dns","ts":{ts + 1},"id.orig_h":"192.0.2.1","query":"evil.com","qtype_name":"A","answers":["93.184.216.34"]}}\n'
+                f'{{"_path":"dns","ts":{ts + 1},"id.orig_h":"192.0.2.1","query":"evil.com","qtype_name":"A","answers":["93.184.216.34"]}}\n'  # noqa: E501
             )
             f.flush()
             return f.name
@@ -300,7 +300,7 @@ class TestZeekSuricataAdapter:
         ts = (datetime.now(UTC) - timedelta(hours=12)).isoformat().replace("+00:00", "Z")
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write(
-                f'{{"timestamp":"{ts}","event_type":"alert","src_ip":"192.0.2.1","dest_ip":"93.184.216.34","alert":{{"signature":"ET MALWARE","category":"Malware Command and Control Activity Detected"}}}}\n'
+                f'{{"timestamp":"{ts}","event_type":"alert","src_ip":"192.0.2.1","dest_ip":"93.184.216.34","alert":{{"signature":"ET MALWARE","category":"Malware Command and Control Activity Detected"}}}}\n'  # noqa: E501
             )
             f.flush()
             return f.name
@@ -355,7 +355,7 @@ class TestProxyAdapter:
         ts = (datetime.now(UTC) - timedelta(hours=12)).timestamp()
         with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as f:
             f.write(
-                f"{ts:.3f}    200 192.0.2.1 TCP_MISS/200 1234 GET http://evil.com/path - HIER_DIRECT/93.184.216.34 text/html\n"
+                f"{ts:.3f}    200 192.0.2.1 TCP_MISS/200 1234 GET http://evil.com/path - HIER_DIRECT/93.184.216.34 text/html\n"  # noqa: E501
             )
             f.flush()
             return f.name

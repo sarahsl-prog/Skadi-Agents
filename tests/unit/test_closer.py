@@ -55,7 +55,7 @@ async def test_closer_produces_verdict_packet() -> None:
 
 def test_tool_allowlist_blocks_unknown_tools() -> None:
     """Unknown tools are not added to the Closer agent."""
-    tool = telemetry_tool_factory(_FakeAdapter())
+    _tool = telemetry_tool_factory(_FakeAdapter())
     # Ensure fake tool is NOT in closer allowlist
     assert "fake_tool_query" not in CLOSER_TOOL_ALLOWLIST
 

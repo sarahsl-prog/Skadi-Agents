@@ -172,9 +172,10 @@ class CasePersistence:
         conn = await self._acquire()
         try:
             await conn.execute(
-                """
+                """  # noqa: E501
                 INSERT INTO wolfpack.branches
-                (id, case_id, parent_branch_id, hypothesis, depth, status, version, created_at, updated_at)
+                (id, case_id, parent_branch_id, hypothesis, depth,
+                 status, version, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 """,
                 branch.branch_id,

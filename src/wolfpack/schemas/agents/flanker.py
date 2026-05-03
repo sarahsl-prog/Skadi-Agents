@@ -51,5 +51,7 @@ class FlankerOutput(BaseModel):
     )
     significant_findings: bool = Field(
         default=False,
-        description="Whether Flanker produced materially new entities, pivots, or hypothesis updates.",
+        description=(
+            "Whether Flanker produced materially new entities, pivots, or hypothesis updates."
+        ),
     )
