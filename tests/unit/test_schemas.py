@@ -211,8 +211,8 @@ class TestFlankerIO:
 
 class TestCloserIO:
     def test_verdict(self) -> None:
-        out = CloserOutput(decision="malicious", confidence=Confidence.HIGH_FIDELITY)
-        assert out.decision == "malicious"
+        out = CloserOutput(decision="MALICIOUS", confidence=Confidence.HIGH_FIDELITY)
+        assert out.decision == "MALICIOUS"
         assert out.confidence == Confidence.HIGH_FIDELITY
 
 
