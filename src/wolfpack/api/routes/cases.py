@@ -27,15 +27,17 @@ async def list_cases(
         where = "WHERE 1=1"
         params: list[Any] = []
         if status_filter:
+            # $ for asyncpg parameter binding (safe from injection)
             where += " AND status = $1"
             params.append(status_filter)
-        rows = await conn.fetch(
-            f"SELECT id, seed, status, version, created_at, updated_at "
-            f"FROM wolfpack.cases {where} ORDER BY updated_at DESC LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}",
-            *params,
-            limit,
-            offset,
+        limit_param = len(params) + 1
+        offset_param = len(params) + 2
+        base_query = (
+            "SELECT id, seed, status, version, created_at, updated_at FROM wolfpack.cases"
         )
+        order_limit = f"ORDER BY updated_at DESC LIMIT ${limit_param} OFFSET ${offset_param}"
+        final_query = f"{base_query} {where} {order_limit}"
+        rows = await conn.fetch(final_query,*params,limit,offset,)
         cases = [
             {
                 "case_id": str(row["id"]),

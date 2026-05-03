@@ -7,12 +7,10 @@ new branches.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic_ai import Agent
 
-from wolfpack.adapters.base import TimeWindow
 from wolfpack.adapters.tools import AdapterDeps
 from wolfpack.llm.factory import get_model
 from wolfpack.observability.agents import traced_agent_run
@@ -218,10 +216,16 @@ async def run_flanker(
             seen.add(key)
             unique_entities.append(e)
 
-    time_window = TimeWindow(
-        start=datetime.now(UTC) - timedelta(hours=24),
-        end=datetime.now(UTC),
-    )
+    # Deduplicate entities by value
+    seen = set()
+    unique_entities = []
+    for e in entities:
+        key = (e.type, e.value)
+        if key not in seen:
+            seen.add(key)
+            unique_entities.append(e)
+    # time_window defined but unused; reserved for future pivot queries
+    _time_window = None
 
     flanker_input = FlankerInput(
         case_id=state.case_id,

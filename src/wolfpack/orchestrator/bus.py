@@ -12,8 +12,11 @@ the event bus.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from typing import Any
+
+_LOGGER = logging.getLogger(__name__)
 
 import nats
 from nats.aio.msg import Msg
@@ -153,8 +156,8 @@ class NATSClient:
         if self._nc is not None:
             try:
                 await self._nc.drain()
-            except Exception:
-                pass
+            except Exception as exc:
+                _LOGGER.debug("NATS drain error (ignored): %s", exc)
             await self._nc.close()
             self._nc = None
             self._js = None

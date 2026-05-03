@@ -35,7 +35,6 @@ class WindowsEventLogAdapter(TelemetrySource):
 
     def __init__(self, evtx_path: str | None = None) -> None:
         if evtx_path is not None:
-            path = Path(evtx_path).resolve()
             # Path traversal guard: ensure resolved path is under a safe base
             if ".." in evtx_path:
                 raise ValueError(f"Path traversal detected in evtx_path: {evtx_path!r}")

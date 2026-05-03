@@ -84,7 +84,7 @@ class AlphaDispatcher:
             "alpha",
             self._agent,
             f"Normalise this hunt seed into a CaseState: {seed.model_dump_json()}",
-            deps=deps,  # type: ignore[call-overload]
+            deps=deps,
         )
         return result.output  # type: ignore[no-any-return]
 
