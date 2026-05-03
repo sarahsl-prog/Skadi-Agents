@@ -13,11 +13,14 @@ authors = [
   { name = "WolfPack Contributors" },
 ]
 dependencies = [
+  "anthropic>=0.34.0",
   "asyncpg>=0.30.0",
   "cryptography>=42.0.0",
   "fastapi>=0.115.0",
   "haystack-ai>=2.14.0",
   "httpx>=0.28.1",
+  "langchain>=0.3.0",
+  "langchain-anthropic>=0.2.0",
   "langgraph>=0.6.7",
   "logfire>=4.14.1",
   "mlflow>=3.5.1",
@@ -30,6 +33,7 @@ dependencies = [
   "pydantic>=2.11.9",
   "pydantic-ai>=1.0.15",
   "pydantic-settings>=2.11.0",
+  "rich>=13.0.0",
   "typer>=0.19.2",
   "uvicorn>=0.34.0",
 ]
@@ -51,15 +55,8 @@ packages = ["src/wolfpack"]
 line-length = 100
 target-version = ["py311"]
 
-[tool.isort]
-profile = "black"
-line_length = 100
-
-
 [tool.ruff]
 line-length = 100
-select = ["E", "F", "I", "N", "S", "UP", "ANN"]
-ignore = ["ANN101", "ANN102"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "S", "RUF"]
@@ -88,50 +85,21 @@ targets = ["src"]
 severity = "medium"
 confidence = "medium"
 
-[tool.poetry]
-name = "ai-sandbox"
-version = "0.1.0"
-description = "AI-assisted development sandbox"
-authors = ["SarahSL <sarahsl@cybercrone.tech>"]
-python = "^3.11"
-
-[tool.poetry.dependencies]
-python = "^3.11"
-anthropic = "^0.34"
-langchain = "^0.3"
-langchain-anthropic = "^0.2"
-pydantic = "^2.7"
-httpx = "^0.27"
-rich = "^13"
-typer = {extras = ["all"], version = "^0.12"}
-
-[tool.poetry.group.dev.dependencies]
-pylint = "^3.2"
-mypy = "^1.10"
-black = "^24"
-isort = "^5.13"
-ruff = "^0.5"
-pytest = "^8"
-pytest-asyncio = "^0.23"
-pytest-cov = "^5"
-ipykernel = "^6"  # Jupyter support
-
-[tool.poetry.group.security.dependencies]
-bandit = {extras = ["toml"], version = "^1.7"}
-safety = "^3"
-pip-audit = "^2.7"
-semgrep = "^1.75"
-
 [dependency-groups]
 dev = [
-  "alembic>=1.14.0",
+  "bandit>=1.7.0",
+  "black>=24.0.0",
   "mypy>=1.18.2",
+  "pip-audit>=2.7.0",
   "pre-commit>=4.3.0",
   "psycopg2-binary>=2.9.10",
+  "pylint>=3.2.0",
   "pytest>=8.4.2",
   "pytest-asyncio>=1.2.0",
   "pytest-cov>=7.0.0",
   "respx>=0.22.0",
   "ruff>=0.14.0",
+  "safety>=3.0.0",
+  "semgrep>=1.75.0",
   "testcontainers[nats,postgres]>=4.13.2",
 ]
