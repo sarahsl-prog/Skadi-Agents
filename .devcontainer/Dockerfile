@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.11-slim-bookworm
 
 ARG USERNAME=devuser
 ARG USER_UID=1000
@@ -16,24 +16,23 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} \
        -m -s /bin/bash ${USERNAME} \
     && mkdir -p /home/${USERNAME}/.vscode-server/extensions \
+    && mkdir -p /home/${USERNAME}/.cache/uv \
     && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
 
-# Poetry - install as root, available system-wide
-ENV POETRY_VERSION=1.8.3
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true
-ENV POETRY_NO_INTERACTION=1
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="${POETRY_HOME}/bin:${PATH}"
+# Install uv (fast Python package manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv \
+    && mv /root/.local/bin/uvx /usr/local/bin/uvx
 
 # Node globals for AI CLI tools
 RUN npm install -g @anthropic-ai/claude-code@latest
 
-# OpenCode - go binary
-RUN curl -fsSL https://opencode.ai/install.sh | sh 2>/dev/null || \
-    wget -qO /usr/local/bin/opencode \
-      https://github.com/sst/opencode/releases/latest/download/opencode-linux-x86_64 \
-    && chmod +x /usr/local/bin/opencode
+# OpenCode CLI (tarball release from sst/opencode)
+RUN curl -fsSL -o /tmp/opencode.tar.gz \
+      https://github.com/sst/opencode/releases/latest/download/opencode-linux-x64.tar.gz \
+    && tar -xzf /tmp/opencode.tar.gz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/opencode \
+    && rm /tmp/opencode.tar.gz
 
 # Drop to non-root
 USER ${USERNAME}

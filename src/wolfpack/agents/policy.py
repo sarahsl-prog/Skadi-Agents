@@ -65,7 +65,8 @@ class PolicyEngine:
         ]
 
     def register(self, policy: dict[str, Any]) -> None:
-        """Register an additional policy dict with ``id``, ``name``, ``description``, and ``check`` keys."""
+        """Register an additional policy dict with ``id``, ``name``,
+        ``description``, and ``check`` keys."""
         required = {"id", "name", "description", "check"}
         if not required.issubset(policy.keys()):
             missing = required - policy.keys()

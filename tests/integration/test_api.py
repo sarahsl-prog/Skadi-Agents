@@ -147,7 +147,7 @@ class TestBreakGlass:
         assert resp.status_code == 403
 
     def test_show_raw_not_found(self, client: TestClient, api_token: str, _mock_pool: Any) -> None:
-        _, mock_conn = _mock_pool
+        _, _mock_conn = _mock_pool
         with patch("wolfpack.api.routes.breakglass.show_raw", new=AsyncMock(return_value=None)):
             resp = client.post(
                 "/api/cases/abc/show-raw",

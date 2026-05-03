@@ -90,7 +90,7 @@ Proposed phasing, each phase ends in a demoable slice.
 
 ### Phase 0 — Repo & environment bootstrap (≈1 week)
 - Monorepo layout: `orchestrator/` (LangGraph), `agents/` (Pydantic AI), `rag/` (Haystack), `schemas/` (shared Pydantic models), `adapters/` (telemetry integrations), `llm/` (LLM client abstraction), `infra/`, `tests/`.
-- Python toolchain (uv/poetry), pre-commit (ruff, mypy, pytest), devcontainer, docker-compose stack: Postgres (with **pgvector** extension) + **NATS JetStream** + OTel Collector + **MLflow** + **Ollama** (with **Llama 3.3 70B Instruct** pulled).
+- Python toolchain (uv), pre-commit (ruff, mypy, pytest), devcontainer, docker-compose stack: Postgres (with **pgvector** extension) + **NATS JetStream** + OTel Collector + **MLflow** + **Ollama** (with **Llama 3.3 70B Instruct** pulled).
 - **LLM provider abstraction** (`llm/`): two concrete clients built on Pydantic AI's `Model` abstraction —
   - `OllamaClient` — native Ollama API; same class handles local Ollama and Ollama Cloud, differentiated by `base_url` + `api_key`.
   - `OpenAICompatibleClient` — one class for vLLM, LM Studio, and any other OpenAI-compatible server.

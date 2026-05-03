@@ -17,7 +17,7 @@ from wolfpack.schemas.entity import Entity
 _LOGGER = logging.getLogger(__name__)
 
 try:
-    from defusedxml import ElementTree as DET
+    from defusedxml import ElementTree as DET  # noqa: N814
 except ImportError:
     DET = None  # type: ignore[misc]
     _LOGGER.warning("defusedxml not installed; falling back to stdlib xml.etree (XXE risk)")
@@ -35,7 +35,6 @@ class WindowsEventLogAdapter(TelemetrySource):
 
     def __init__(self, evtx_path: str | None = None) -> None:
         if evtx_path is not None:
-            path = Path(evtx_path).resolve()
             # Path traversal guard: ensure resolved path is under a safe base
             if ".." in evtx_path:
                 raise ValueError(f"Path traversal detected in evtx_path: {evtx_path!r}")
@@ -100,7 +99,7 @@ class WindowsEventLogAdapter(TelemetrySource):
     ) -> list[Event]:
         events: list[Event] = []
         try:
-            tree = ET.parse(str(path))  # type: ignore[attr-defined]
+            tree = ET.parse(str(path))  # type: ignore[attr-defined]  # noqa: S314
         except Exception as exc:
             _LOGGER.warning("XML fallback parse failed: %s", exc)
             return events
@@ -120,7 +119,7 @@ class WindowsEventLogAdapter(TelemetrySource):
         filters: dict[str, Any] | None,
     ) -> Event | None:
         try:
-            root = ET.fromstring(xml)  # type: ignore[attr-defined]
+            root = ET.fromstring(xml)  # type: ignore[attr-defined]  # noqa: S314
         except Exception as exc:
             _LOGGER.warning("Event XML parse failed: %s", exc)
             return None

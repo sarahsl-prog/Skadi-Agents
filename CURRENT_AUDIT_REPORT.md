@@ -1190,7 +1190,7 @@ The previous audit report (`CODEBASE_AUDIT_REPORT.md`) listed 11 issues, all mar
 |---|---|
 | IPv6 loopback | Verified resolved |
 | Docker Compose comments | Verified resolved |
-| Duplicate dev deps | `pyproject.toml` still has `[tool.poetry]` section (lines 90-122) with duplicate deps |
+| Duplicate dev deps | ✅ REMOVED — Poetry configuration stripped; consolidated to PEP 621 + `[dependency-groups].dev` |
 | `request_timeout_s` validation | Verified resolved |
 | Pool size cross-validation | Verified resolved |
 | `validators.py` comment | Verified resolved |

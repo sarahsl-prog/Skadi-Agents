@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 
-from wolfpack.adapters.tools import AdapterDeps
+from wolfpack.adapters.tools import AdapterDeps, build_adapter_tools
 from wolfpack.agents.policy import PolicyEngine
 from wolfpack.llm.factory import get_model
 from wolfpack.observability.agents import traced_agent_run
@@ -153,7 +153,6 @@ def _build_tools(
             SyslogAdapter,
             WindowsEventLogAdapter,
         )
-        from wolfpack.adapters.tools import build_adapter_tools
 
         adapter_tools = build_adapter_tools(
             [
