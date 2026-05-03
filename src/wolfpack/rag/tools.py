@@ -59,9 +59,23 @@ def _instruction_repetition_defense(text: str) -> str:
         r"system\s+prompt\s*:",
         r"you\s+are\s+now\s+",
         r"disregard\s+(all\s+)?prior\s+context",
+        r"forget\s+(all\s+)?previous\s+instructions",
+        r"new\s+instructions\s*:",
+        r"override\s+(all\s+)?previous\s+settings",
+        r"act\s+as\s+(if\s+)?you\s+are\s+",
+        r"ignore\s+the\s+above\s+instructions",
+        r"do\s+not\s+follow\s+(any\s+)?prior\s+directives",
     ]
     for pat in patterns:
         text = re.sub(pat, lambda m: f"`{m.group(0)}`", text, flags=re.IGNORECASE)
+    return text
+
+
+def _delimiter_injection_defense(text: str) -> str:
+    """Escape document-boundary markers that could break structure."""
+    # Escape our own document separators so injected text can't mimic them
+    text = re.sub(r"---\s*DOCUMENT\s+\d+", "`DOCUMENT_SEPARATOR`", text, flags=re.IGNORECASE)
+    text = re.sub(r"---\s*END\s+DOCUMENT\s*---", "`END_SEPARATOR`", text, flags=re.IGNORECASE)
     return text
 
 
@@ -70,6 +84,7 @@ def _sanitize(text: str) -> str:
     text = _strip_javascript(text)
     text = _strip_html_tags(text)
     text = _strip_markdown_links(text)
+    text = _delimiter_injection_defense(text)
     text = _instruction_repetition_defense(text)
     # Collapse excessive whitespace
     text = re.sub(r"\s+", " ", text).strip()
@@ -83,7 +98,8 @@ def _build_answer(docs: list[RAGDocument]) -> str:
         parts.append(f"--- DOCUMENT {i} (id={doc.id}) ---")
         parts.append(_sanitize(doc.content))
         if doc.metadata:
-            parts.append(f"metadata: {doc.metadata}")
+            sanitized_meta = {k: _sanitize(str(v)) for k, v in doc.metadata.items()}
+            parts.append(f"metadata: {sanitized_meta}")
         parts.append("")
     return "\n".join(parts)
 

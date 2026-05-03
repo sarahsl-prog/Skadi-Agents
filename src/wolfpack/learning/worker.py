@@ -5,15 +5,18 @@ Moves approved analyst decisions into the case-history knowledge base.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import asyncpg
 
 from wolfpack.eval.replay import ReplayHarness
+
+_LOGGER = logging.getLogger(__name__)
 from wolfpack.learning.summary import format_case_summary
 from wolfpack.rag.case_history import CaseHistoryPipeline
 from wolfpack.schemas.confidence import Confidence
-from wolfpack.schemas.persistence import CasePersistence, PersistencePool
+from wolfpack.schemas.persistence import CasePersistence
 
 
 class LearningQueueWorker:
@@ -56,10 +59,14 @@ class LearningQueueWorker:
         schedule_minutes: int = 5,
         batch_size: int = 50,
     ) -> LearningQueueWorker:
-        """Build a worker from a raw connection pool."""
-        persistence = CasePersistence(
-            PersistencePool(dsn="", min_size=0, max_size=0)
-        )
+        """Build a worker from a raw connection pool.
+
+        The provided *pool* is used directly; no separate persistence pool
+        is created since the worker shares the caller's pool.
+        """
+        from wolfpack.schemas.persistence import CasePersistence
+
+        persistence = CasePersistence(pool=pool)
         return cls(
             pool=pool,
             pipeline=pipeline,
@@ -122,9 +129,7 @@ class LearningQueueWorker:
 
         verdict = VerdictPacket(
             decision=(
-                case_state.verdict_decision
-                if case_state.verdict_decision
-                else "INCONCLUSIVE"
+                case_state.verdict_decision if case_state.verdict_decision else "INCONCLUSIVE"
             ),
             confidence=(
                 case_state.overall_confidence
@@ -133,13 +138,17 @@ class LearningQueueWorker:
             ),
         )
 
-        # 3. Quality gate: need plausible or above
+        # 3. Quality gate: need plausible or above (soft fail → skip)
         min_confidence = Confidence.PLAUSIBLE
         if verdict.confidence < min_confidence:
-            raise RuntimeError(
-                f"Confidence {verdict.confidence} < {min_confidence} "
-                f"for case {case_id}"
+            _LOGGER.warning(
+                "Skipping case %s: confidence %s < %s",
+                case_id,
+                verdict.confidence,
+                min_confidence,
             )
+            await self._set_failure_status(str(entry["id"]), "low_confidence")
+            return
 
         # 4. Format summary
         summary = format_case_summary(case_state, verdict=verdict)
@@ -163,9 +172,21 @@ class LearningQueueWorker:
                 entry_id,
             )
 
-    async def _handle_failure(
-        self, entry_id: str, exc: Exception
-    ) -> None:
+    async def _set_failure_status(self, entry_id: str, reason: str) -> None:
+        """Mark entry as permanently failed (no more retries)."""
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE wolfpack.learning_queue
+                SET last_error = $2,
+                    ingested_at = NOW()
+                WHERE id = $1
+                """,
+                entry_id,
+                reason,
+            )
+
+    async def _handle_failure(self, entry_id: str, exc: Exception) -> None:
         """Increment retry count for the entry."""
         async with self._pool.acquire() as conn:
             await conn.execute(
@@ -203,6 +224,7 @@ class LearningQueueWorker:
             seed_data = case_row["seed"]
             if isinstance(seed_data, str):
                 import json
+
                 seed_data = json.loads(seed_data)
 
             case = CaseState(
@@ -228,14 +250,13 @@ class LearningQueueWorker:
                 if isinstance(hyp_data, str):
                     hyp_data = json.loads(hyp_data)
                 from wolfpack.schemas.branch import BranchSpec
+
                 spec = BranchSpec.model_validate(hyp_data)
                 branch = BranchState(
                     branch_id=str(row["id"]),
                     case_id=str(row["case_id"]),
                     parent_branch_id=(
-                        str(row["parent_branch_id"])
-                        if row["parent_branch_id"]
-                        else None
+                        str(row["parent_branch_id"]) if row["parent_branch_id"] else None
                     ),
                     spec=spec,
                     status=row["status"],
@@ -265,34 +286,13 @@ class LearningQueueWorker:
                     case_id,
                     branch.branch_id,
                 )
-                # Hypotheses for branch
-                hyp_rows = await conn.fetch(
-                    "SELECT description, confidence, status"
-                    " FROM wolfpack.hypotheses WHERE branch_id = $1",
-                    branch.branch_id,
-                )
-                for h in hyp_rows:
-                    branch.hypotheses.append(
-                        Hypothesis(
-                            description=h["description"],
-                            confidence=Confidence(int(h["confidence"])),
-                            status=h["status"],
-                        )
-                    )
-                # Evidence refs for branch
-                ev_rows = await conn.fetch(
-                    "SELECT case_id, branch_id, entry_type, content,"
-                    " created_at, agent_run_id"
-                    " FROM wolfpack.evidence_ledger"
-                    " WHERE case_id = $1 AND branch_id = $2",
-                    case_id, branch.branch_id,
-                )
                 for e in ev_rows:
                     content = e["content"]
                     if isinstance(content, str):
                         content = json.loads(content)
                     ref = EvidenceRef.model_validate(content)
                     branch.evidence_refs.append(ref)
+                case.evidence_refs.append(ref)
                 case.branches.append(branch)
 
             return case
@@ -307,4 +307,3 @@ class LearningQueueWorker:
             golden_sets_dir=golden_sets_dir,
         )
         return await replay.run_all()
-

@@ -6,7 +6,9 @@ and pagination.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -29,6 +31,8 @@ class CrowdStrikeAdapter(TelemetrySource):
         self._client_id = client_id
         self._client_secret = client_secret
         self._token: str | None = None
+        self._token_expires: datetime | None = None
+        self._client = httpx.AsyncClient(timeout=30.0)
 
     async def query(
         self,
@@ -46,29 +50,57 @@ class CrowdStrikeAdapter(TelemetrySource):
         events: list[Event] = []
         params = self._build_params(entity, time_window, filters)
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self._base_url}/detects/queries/detects/v1",
-                headers={"Authorization": f"Bearer {self._token}"},
-                params=params,
-                timeout=30.0,
-            )
-            if resp.status_code == 429:
-                # Rate limited — return empty; caller can retry
-                return events
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await self._client.get(
+            f"{self._base_url}/detects/queries/detects/v1",
+            headers={"Authorization": f"Bearer {self._token}"},
+            params=params,
+        )
+        if resp.status_code == 429:
+            # Rate limited — return empty; caller can retry
+            return events
+        resp.raise_for_status()
+        data = resp.json()
+        detect_ids = data.get("resources", [])
 
-        for detect_id in data.get("resources", []):
-            events.append(
-                Event(
-                    timestamp=time_window.start,
-                    source=self.name,
-                    raw_payload={"detect_id": detect_id, "entity": entity.model_dump()},
-                    entities=[entity],
-                    severity="high",
-                )
+        # Fetch full detection details for accurate timestamps
+        if detect_ids:
+            detail_resp = await self._client.post(
+                f"{self._base_url}/detects/entities/detects/v1",
+                headers={"Authorization": f"Bearer {self._token}"},
+                json={"ids": detect_ids},
             )
+            if detail_resp.status_code == 200:
+                detail_data = detail_resp.json()
+                details = {
+                    d.get("detection_id", d.get("id")): d for d in detail_data.get("resources", [])
+                }
+            else:
+                details = {}
+
+            for detect_id in detect_ids:
+                detail = details.get(detect_id, {})
+                ts_str = detail.get("last_behavior") or detail.get("timestamp")
+                try:
+                    ts = (
+                        datetime.fromisoformat(str(ts_str).replace("Z", "+00:00"))
+                        if ts_str
+                        else time_window.start
+                    )
+                except ValueError:
+                    ts = time_window.start
+                events.append(
+                    Event(
+                        timestamp=ts,
+                        source=self.name,
+                        raw_payload={
+                            "detect_id": detect_id,
+                            "entity": entity.model_dump(),
+                            "detail": detail,
+                        },
+                        entities=[entity],
+                        severity="high",
+                    )
+                )
 
         return events
 
@@ -82,23 +114,27 @@ class CrowdStrikeAdapter(TelemetrySource):
             return False
 
     async def _ensure_token(self) -> None:
-        if self._token is not None:
+        if (
+            self._token is not None
+            and self._token_expires is not None
+            and datetime.now(UTC) < self._token_expires
+        ):
             return
         if not self._client_id or not self._client_secret:
             return
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self._base_url}/oauth2/token",
-                data={
-                    "client_id": self._client_id,
-                    "client_secret": self._client_secret,
-                    "grant_type": "client_credentials",
-                },
-                timeout=30.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            self._token = data.get("access_token")
+        resp = await self._client.post(
+            f"{self._base_url}/oauth2/token",
+            data={
+                "client_id": self._client_id,
+                "client_secret": self._client_secret,
+                "grant_type": "client_credentials",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        self._token = data.get("access_token")
+        expires_in = data.get("expires_in", 1800)
+        self._token_expires = datetime.now(UTC) + timedelta(seconds=expires_in - 60)
 
     def _build_params(
         self,
@@ -111,15 +147,22 @@ class CrowdStrikeAdapter(TelemetrySource):
             "sort": "last_behavior|desc",
         }
         # Filter by entity value (AID for hosts, external IP, etc.)
+        # URL-encode entity values to prevent FQL injection
+        encoded_value = quote(entity.value, safe="")
         if entity.type == "host":
-            params["filter"] = f"device.hostname:'{entity.value}'"
+            params["filter"] = f"device.hostname:'{encoded_value}'"
         elif entity.type == "ip":
-            params["filter"] = f"external_ip:'{entity.value}'"
+            params["filter"] = f"external_ip:'{encoded_value}'"
         else:
             params["q"] = entity.value
 
         if filters and "severity" in filters:
             sev = filters["severity"]
-            params["filter"] = params.get("filter", "") + f"+max_severity_displayname:'{sev}'"
+            encoded_sev = quote(sev, safe="")
+            existing = params.get("filter", "")
+            if existing:
+                params["filter"] = existing + f"+max_severity_displayname:'{encoded_sev}'"
+            else:
+                params["filter"] = f"max_severity_displayname:'{encoded_sev}'"
 
         return params

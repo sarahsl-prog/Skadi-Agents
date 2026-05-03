@@ -67,9 +67,10 @@ class AlphaDispatcher:
         @self._agent.tool  # type: ignore[arg-type]
         async def create_case(ctx: RunContext[AlphaDeps], state: CaseState) -> str:
             """Persist a :class:`CaseState` to the database."""
-            if ctx.deps.pool is not None:
-                persistence = CasePersistence(ctx.deps.pool)
-                await persistence.create_case(state)
+            if ctx.deps.pool is None:
+                return f"ERROR: pool unavailable, case {state.case_id} not persisted"
+            persistence = CasePersistence(ctx.deps.pool)
+            await persistence.create_case(state)
             return state.case_id
 
     async def dispatch(
@@ -93,6 +94,5 @@ class AlphaDispatcher:
         pool: PersistencePool | None = None,
     ) -> AlphaOutput:
         """Synchronous wrapper around :meth:`dispatch` for LangGraph wiring."""
-        return asyncio.run(self.dispatch(seed, pool=pool))
-
-
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.dispatch(seed, pool=pool))

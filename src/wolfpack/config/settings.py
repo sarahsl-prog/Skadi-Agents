@@ -32,9 +32,7 @@ class LLMConfig(BaseModel):
     def _validate_url_scheme(cls, v: str) -> str:
         parsed = urlparse(v)
         if parsed.scheme not in _ALLOWED_SCHEMES:
-            raise ValueError(
-                f"base_url must use http or https scheme, got: {parsed.scheme!r}"
-            )
+            raise ValueError(f"base_url must use http or https scheme, got: {parsed.scheme!r}")
         if not parsed.netloc:
             raise ValueError("base_url must have a host component")
         return v
@@ -55,8 +53,23 @@ class PostgresConfig(BaseModel):
         return self
 
 
+_ALLOWED_NATS_SCHEMES = {"nats", "nats+tls", "ws", "wss", "http", "https"}
+
+
 class NATSConfig(BaseModel):
     url: str = "nats://localhost:4222"
+
+    @field_validator("url")
+    @classmethod
+    def _validate_url_scheme(cls, v: str) -> str:
+        parsed = urlparse(v)
+        if parsed.scheme not in _ALLOWED_NATS_SCHEMES:
+            raise ValueError(
+                f"NATS url must use nats/nats+tls/ws/wss/http/https scheme, got: {parsed.scheme!r}"
+            )
+        if not parsed.netloc:
+            raise ValueError("NATS url must have a host component")
+        return v
 
 
 class OTelConfig(BaseModel):
@@ -64,9 +77,31 @@ class OTelConfig(BaseModel):
     service_name: str = "wolfpack"
     service_namespace: str = "wolfpack"
 
+    @field_validator("endpoint")
+    @classmethod
+    def _validate_url_scheme(cls, v: str) -> str:
+        parsed = urlparse(v)
+        if parsed.scheme not in _ALLOWED_SCHEMES:
+            raise ValueError(f"OTel endpoint must use http or https scheme, got: {parsed.scheme!r}")
+        if not parsed.netloc:
+            raise ValueError("OTel endpoint must have a host component")
+        return v
+
 
 class MLflowConfig(BaseModel):
     tracking_uri: str = "http://localhost:5000"
+
+    @field_validator("tracking_uri")
+    @classmethod
+    def _validate_url_scheme(cls, v: str) -> str:
+        parsed = urlparse(v)
+        if parsed.scheme not in _ALLOWED_SCHEMES:
+            raise ValueError(
+                f"MLflow tracking_uri must use http or https scheme, got: {parsed.scheme!r}"
+            )
+        if not parsed.netloc:
+            raise ValueError("MLflow tracking_uri must have a host component")
+        return v
 
 
 class BranchBudgetConfig(BaseModel):
@@ -76,6 +111,13 @@ class BranchBudgetConfig(BaseModel):
     # reserved for V2. They require LLM-provider instrumentation that
     # is not yet wired into the graph nodes. Only depth and branch
     # count are enforced in V1.
+
+    @field_validator("max_depth", "max_branches_per_case")
+    @classmethod
+    def _non_negative(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError(f"must be non-negative, got {v}")
+        return v
 
 
 class WebhookConfig(BaseModel):
@@ -93,6 +135,13 @@ class LearningConfig(BaseModel):
     retry_limit: int = 3
     min_confidence: int = 3
     enable_worker: bool = True
+
+    @field_validator("schedule_minutes", "batch_size", "retry_limit", "min_confidence")
+    @classmethod
+    def _positive_int(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError(f"must be a positive integer, got {v}")
+        return v
 
 
 class Settings(BaseSettings):

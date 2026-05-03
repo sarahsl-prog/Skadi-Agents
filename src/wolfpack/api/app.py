@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +11,7 @@ from wolfpack.api.routes import breakglass, cases, review, ws
 
 
 @asynccontextmanager
-async def _lifespan(app: FastAPI):  # noqa: ARG001
+async def _lifespan(app: FastAPI):
     """Application lifespan handler."""
     yield
 
@@ -27,10 +26,10 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["http://localhost:3000", "http://localhost:5173"],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type", "X-API-Token"],
     )
 
     app.include_router(cases.router, prefix="/api")

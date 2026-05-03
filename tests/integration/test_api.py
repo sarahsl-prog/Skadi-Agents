@@ -35,15 +35,18 @@ def _mock_pool():
     mock_pool.acquire = _acquire
     mock_pool.release = _release
 
-    with patch("wolfpack.api.routes.cases._pool", mock_pool), \
-         patch("wolfpack.api.routes.review._pool", mock_pool), \
-         patch("wolfpack.api.routes.breakglass._pool", mock_pool):
+    with (
+        patch("wolfpack.api.routes.cases._pool", mock_pool),
+        patch("wolfpack.api.routes.review._pool", mock_pool),
+        patch("wolfpack.api.routes.breakglass._pool", mock_pool),
+    ):
         yield mock_pool, mock_conn
 
 
 @pytest.fixture
 def api_token() -> str:
     from wolfpack.api.auth import _DEFAULT_TOKEN
+
     return _DEFAULT_TOKEN
 
 
@@ -85,7 +88,9 @@ class TestCases:
         assert data["case_id"] == "abc"
         assert data["events"] == []
 
-    def test_get_case_verdict_missing(self, client: TestClient, api_token: str, _mock_pool: Any) -> None:
+    def test_get_case_verdict_missing(
+        self, client: TestClient, api_token: str, _mock_pool: Any
+    ) -> None:
         _, mock_conn = _mock_pool
         mock_conn.fetchrow = AsyncMock(return_value=None)
 

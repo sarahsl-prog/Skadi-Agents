@@ -75,6 +75,8 @@ class ReviewWatchdog:
                 continue
             if isinstance(started_at, str):
                 started_at = datetime.fromisoformat(started_at)
+            if started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=UTC)
             if now - started_at > self._timeout:
                 case_id = case["case_id"]
                 logger.warning(

@@ -20,7 +20,11 @@ from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig
 
 from wolfpack.config.settings import NATSConfig
-from wolfpack.observability.nats_propagation import extract_nats_headers, inject_nats_headers
+from wolfpack.observability.nats_propagation import (
+    context,
+    extract_nats_headers,
+    inject_nats_headers,
+)
 
 
 class NATSClient:
@@ -62,9 +66,11 @@ class NATSClient:
         for name, subjects in streams:
             try:
                 await self._js.add_stream(name=name, subjects=subjects)
-            except nats.js.errors.BadRequestError:
-                # Stream likely already exists; idempotent.
-                pass
+            except nats.js.errors.BadRequestError as exc:
+                # Distinguish "already exists" from genuine bad requests.
+                desc = getattr(exc, "description", "") or ""
+                if "already exists" not in desc.lower():
+                    raise
 
     async def publish(
         self,
@@ -90,17 +96,15 @@ class NATSClient:
             raise RuntimeError("NATSClient not connected - call connect() first")
 
         if isinstance(payload, dict):
-            payload = json.dumps(payload).encode()
+            payload = json.dumps(payload, default=str).encode()
         elif isinstance(payload, str):
             payload = payload.encode()
 
-        merged_headers = inject_nats_headers()
-        if headers:
-            merged_headers.update(headers)
+        # User headers merged first so OTel propagation wins and cannot be overwritten.
+        merged_headers = dict(headers) if headers else {}
+        merged_headers.update(inject_nats_headers())
 
-        return await self._js.publish(
-            subject, payload, headers=merged_headers
-        )
+        return await self._js.publish(subject, payload, headers=merged_headers)
 
     async def subscribe(
         self,
@@ -128,9 +132,13 @@ class NATSClient:
         if self._js is None:
             raise RuntimeError("NATSClient not connected - call connect() first")
 
-        def _wrapped_handler(msg: Msg) -> Any:
-            extract_nats_headers(dict(msg.headers) if msg.headers else None)
-            return handler(msg)
+        async def _wrapped_handler(msg: Msg) -> Any:
+            ctx = extract_nats_headers(dict(msg.headers) if msg.headers else None)
+            token = context.attach(ctx)
+            try:
+                return await handler(msg)
+            finally:
+                context.detach(token)
 
         return await self._js.subscribe(
             subject,
@@ -143,6 +151,10 @@ class NATSClient:
     async def close(self) -> None:
         """Drain and close the NATS connection."""
         if self._nc is not None:
+            try:
+                await self._nc.drain()
+            except Exception:
+                pass
             await self._nc.close()
             self._nc = None
             self._js = None

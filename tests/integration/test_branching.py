@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from wolfpack.orchestrator.budget import BranchBudget, BudgetRemaining
+from wolfpack.orchestrator.budget import BranchBudget
 from wolfpack.orchestrator.dedup import hypothesis_dedup
 from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.hypothesis import Hypothesis
@@ -18,32 +15,37 @@ from wolfpack.schemas.hypothesis import Hypothesis
 class TestBranchBudget:
     """Branch-explosion controls."""
 
-    def test_default_budget_allows_creation(self) -> None:
+    @pytest.mark.anyio
+    async def test_default_budget_allows_creation(self) -> None:
         budget = BranchBudget()
-        assert budget.check("case-001", branch_depth=1) is True
+        assert await budget.check("case-001", branch_depth=1) is True
 
-    def test_depth_limit_enforced(self) -> None:
+    @pytest.mark.anyio
+    async def test_depth_limit_enforced(self) -> None:
         budget = BranchBudget()
-        assert budget.check("case-001", branch_depth=3) is True
-        assert budget.check("case-001", branch_depth=4) is False
+        assert await budget.check("case-001", branch_depth=3) is True
+        assert await budget.check("case-001", branch_depth=4) is False
 
-    def test_branch_count_limit_enforced(self) -> None:
+    @pytest.mark.anyio
+    async def test_branch_count_limit_enforced(self) -> None:
         budget = BranchBudget()
         budget.consume("case-001", branches=10)
-        assert budget.check("case-001", branch_depth=1) is False
+        assert await budget.check("case-001", branch_depth=1) is False
 
-    def test_remaining_budget(self) -> None:
+    @pytest.mark.anyio
+    async def test_remaining_budget(self) -> None:
         budget = BranchBudget()
         budget.consume("case-001", branches=2)
-        rem = budget.remaining("case-001")
+        rem = await budget.remaining("case-001")
         assert rem.branches_remaining == 8
         assert rem.depth_remaining == 3
 
-    def test_budget_is_per_case(self) -> None:
+    @pytest.mark.anyio
+    async def test_budget_is_per_case(self) -> None:
         budget = BranchBudget()
         budget.consume("case-001", branches=10)
-        assert budget.check("case-001", branch_depth=1) is False
-        assert budget.check("case-002", branch_depth=1) is True
+        assert await budget.check("case-001", branch_depth=1) is False
+        assert await budget.check("case-002", branch_depth=1) is True
 
 
 class TestHypothesisDedup:

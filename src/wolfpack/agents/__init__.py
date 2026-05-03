@@ -5,4 +5,3 @@ from wolfpack.agents.flanker import run_flanker
 from wolfpack.agents.tracker import run_tracker
 
 __all__ = ["run_closer", "run_flanker", "run_tracker"]
-

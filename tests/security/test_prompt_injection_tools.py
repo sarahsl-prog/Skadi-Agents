@@ -12,6 +12,7 @@ from wolfpack.processing.ner import strip_pii
 # Adapter output sanitization helpers
 # ------------------------------------------------------------------ #
 
+
 def _sanitize_adapter_output(text: str) -> str:
     """Strip injection patterns and PII from adapter tool output."""
     # Step 1: PII stripping (pseudonymization prep)
@@ -46,10 +47,7 @@ class TestTelemetryPromptInjection:
         assert "10.0.0.1" not in cleaned
 
     def test_malicious_dns_response_is_sanitized(self) -> None:
-        payload = (
-            "evil.com. 300 IN A 192.168.1.1 "
-            "[Click here](http://evil.com/override+system)"
-        )
+        payload = "evil.com. 300 IN A 192.168.1.1 " "[Click here](http://evil.com/override+system)"
         cleaned = _sanitize_adapter_output(payload)
         assert "override" not in cleaned.lower()
         assert "192.168.1.1" not in cleaned

@@ -73,9 +73,7 @@ class TestEvalResult:
                     "name": "test",
                     "seed": {"type": "ioc", "raw_payload": {}, "metadata": {}},
                     "expected_confidence": 3,
-                    "expected_hypotheses": [
-                        {"description": "Malware detected on host"}
-                    ],
+                    "expected_hypotheses": [{"description": "Malware detected on host"}],
                 },
                 f,
             )
@@ -149,9 +147,7 @@ class TestEvalHarness:
                 "evidence_refs": [{"source_type": "firewall"}],
             }
 
-        monkeypatch.setattr(
-            "wolfpack.eval.harness.run_tracker", _mock_run_tracker
-        )
+        monkeypatch.setattr("wolfpack.eval.harness.run_tracker", _mock_run_tracker)
         harness = EvalHarness("tests/eval/golden_sets/")
         metrics = await harness.run_all()
         assert metrics["count"] >= 5

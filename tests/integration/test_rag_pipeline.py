@@ -24,9 +24,7 @@ async def pg_pool() -> AsyncGenerator[dict[str, Any]]:
     from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("pgvector/pgvector:pg16").start() as pg:
-        dsn = pg.get_connection_url().replace(
-            "postgresql+psycopg2://", "postgresql://"
-        )
+        dsn = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql://")
         pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
 
         # Ensure pgvector extension exists
@@ -51,14 +49,12 @@ class TestPGVectorStore:
 
         conn = await pool.acquire()
         try:
-            row = await conn.fetchrow(
-                """
+            row = await conn.fetchrow("""
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.tables
                     WHERE table_name = 'test_rag_docs'
                 )
-                """
-            )
+                """)
             assert row is not None
             assert row["exists"] is True
         finally:
@@ -92,9 +88,7 @@ class TestPGVectorStore:
         ]
         await store.write_documents(docs)
 
-        results = await store.keyword_search(
-            "doc", top_k=5, filters={"source": "mitre"}
-        )
+        results = await store.keyword_search("doc", top_k=5, filters={"source": "mitre"})
         assert len(results) == 1
         assert results[0].id == "f1"
 
@@ -176,8 +170,6 @@ class TestCaseHistoryPipeline:
         ]
         await pipeline.index(docs)
 
-        results = await pipeline.retrieve(
-            "alert", top_k=5, filters={"outcome": "benign"}
-        )
+        results = await pipeline.retrieve("alert", top_k=5, filters={"outcome": "benign"})
         assert len(results) == 1
         assert results[0].id == "c2"

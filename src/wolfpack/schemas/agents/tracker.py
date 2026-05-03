@@ -41,3 +41,6 @@ class TrackerOutput(BaseModel):
     tracker_confidence: Confidence = Field(
         ..., description="Tracker's overall confidence in the findings."
     )
+    reasoning: str = Field(
+        default="", description="Concise human-readable reasoning for the findings."
+    )

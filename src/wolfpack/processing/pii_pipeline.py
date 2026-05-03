@@ -11,6 +11,7 @@ from typing import Any
 from wolfpack.adapters.base import Event
 from wolfpack.processing.ner import NERStripper
 from wolfpack.processing.pii import PIICache
+from wolfpack.schemas.entity import Entity
 from wolfpack.schemas.ledger import insert_ledger_entry
 from wolfpack.schemas.persistence import PersistencePool
 
@@ -42,16 +43,10 @@ class PIIPipeline:
         for event in events:
             new_entities = []
             for ent in event.entities:
-                token = await self._cache.pseudonymize(
-                    case_id, ent.value, ent.type
-                )
-                from wolfpack.schemas.entity import Entity
-
+                token = await self._cache.pseudonymize(case_id, ent.value, ent.type)
                 new_entities.append(Entity(type=ent.type, value=token))
 
-            new_payload = await self._sanitize_payload(
-                case_id, event.raw_payload
-            )
+            new_payload = await self._sanitize_payload(case_id, event.raw_payload)
 
             sanitized.append(
                 Event(
@@ -77,9 +72,7 @@ class PIIPipeline:
 
         return sanitized
 
-    async def _sanitize_payload(
-        self, case_id: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _sanitize_payload(self, case_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Recursively sanitize dict values — pseudonymize identifiers,
         NER-strip free text."""
         result: dict[str, Any] = {}
@@ -94,9 +87,7 @@ class PIIPipeline:
                 result[key] = value
         return result
 
-    async def _sanitize_list(
-        self, case_id: str, items: list[Any]
-    ) -> list[Any]:
+    async def _sanitize_list(self, case_id: str, items: list[Any]) -> list[Any]:
         result: list[Any] = []
         for item in items:
             if isinstance(item, str):
@@ -109,9 +100,7 @@ class PIIPipeline:
                 result.append(item)
         return result
 
-    async def _sanitize_string(
-        self, case_id: str, key: str, value: str
-    ) -> str:
+    async def _sanitize_string(self, case_id: str, key: str, value: str) -> str:
         """Apply NER stripping; any tokens produced are then pseudonymized."""
         stripped, mapping = self._ner.strip(value)
         # Pseudonymize the mapped original values so the ledger never
@@ -120,9 +109,7 @@ class PIIPipeline:
             # Guess identifier type from the placeholder name
             id_type = token.strip("<>").split("_")[0].lower()
             if id_type in ("ip", "cidr", "mac", "hostname", "email", "url"):
-                replacement = await self._cache.pseudonymize(
-                    case_id, original, id_type
-                )
+                replacement = await self._cache.pseudonymize(case_id, original, id_type)
                 stripped = stripped.replace(token, replacement)
         return stripped
 
@@ -135,8 +122,6 @@ class PIIPipeline:
     ) -> None:
         conn = await self._pool.acquire()
         try:
-            await insert_ledger_entry(
-                conn, case_id, entry_type, content, agent_run_id=agent_run_id
-            )
+            await insert_ledger_entry(conn, case_id, entry_type, content, agent_run_id=agent_run_id)
         finally:
             await self._pool.release(conn)

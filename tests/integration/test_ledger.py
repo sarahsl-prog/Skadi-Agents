@@ -64,8 +64,7 @@ async def ledger_conn(ledger_pool: asyncpg.Pool) -> AsyncGenerator[asyncpg.Conne
 
 async def _create_case(conn: asyncpg.Connection, case_id: str) -> None:
     await conn.execute(
-        "INSERT INTO wolfpack.cases (id, seed, status, version) "
-        "VALUES ($1, $2, $3, $4)",
+        "INSERT INTO wolfpack.cases (id, seed, status, version) " "VALUES ($1, $2, $3, $4)",
         case_id,
         '{"type": "test", "raw_payload": {}}',
         "new",

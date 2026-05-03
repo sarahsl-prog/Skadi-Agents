@@ -3,17 +3,6 @@
 from pydantic import BaseModel, Field
 
 from wolfpack.schemas.case_state import CaseState
-from wolfpack.schemas.seed import Seed
-
-
-class AlphaInput(BaseModel):
-    """Input to the Alpha Dispatcher.
-
-    Alpha receives a seed, normalises it, creates a ``CaseState``,
-    and publishes the initial task list.
-    """
-
-    seed: Seed = Field(..., description="Raw seed from the ingestion pipeline.")
 
 
 class AlphaOutput(BaseModel):
@@ -28,6 +17,4 @@ class AlphaOutput(BaseModel):
         default="tracker",
         description="Agent that should receive the next task.",
     )
-    task_description: str = Field(
-        default="", description="Human-readable task for the next agent."
-    )
+    task_description: str = Field(default="", description="Human-readable task for the next agent.")

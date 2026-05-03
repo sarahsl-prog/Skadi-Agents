@@ -122,9 +122,7 @@ class TestDEKLifecycle:
         after_shred = await get_wrapped_dek(crypto_pool, case_id)
         assert after_shred is None
 
-    async def test_shred_idempotent(
-        self, crypto_pool: PersistencePool, kms: SoftwareKMS
-    ) -> None:
+    async def test_shred_idempotent(self, crypto_pool: PersistencePool, kms: SoftwareKMS) -> None:
         case_id = str(uuid.uuid4())
         await _create_case(crypto_pool, case_id)
 
@@ -215,9 +213,7 @@ class TestPseudonymize:
 
 
 class TestDepseudonymize:
-    async def test_depseudonymize_success_and_audit(
-        self, crypto_pool: PersistencePool
-    ) -> None:
+    async def test_depseudonymize_success_and_audit(self, crypto_pool: PersistencePool) -> None:
         case_id = str(uuid.uuid4())
         await _create_case(crypto_pool, case_id)
 
@@ -243,9 +239,7 @@ class TestDepseudonymize:
         case_id = str(uuid.uuid4())
         await _create_case(crypto_pool, case_id)
 
-        result = await depseudonymize(
-            crypto_pool, case_id, "user_deadbeef", "analyst-1"
-        )
+        result = await depseudonymize(crypto_pool, case_id, "user_deadbeef", "analyst-1")
         assert result is None
 
     async def test_depseudonymize_raises_without_authorized_by(

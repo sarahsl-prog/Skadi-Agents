@@ -14,9 +14,7 @@ class ScribeInput(BaseModel):
     """
 
     case_id: str = Field(..., description="Case the event belongs to.")
-    branch_id: str | None = Field(
-        default=None, description="Branch scope (NULL for case-level)."
-    )
+    branch_id: str | None = Field(default=None, description="Branch scope (NULL for case-level).")
     event_type: Literal[
         "agent_action",
         "tool_call",
@@ -27,9 +25,7 @@ class ScribeInput(BaseModel):
     payload: dict[str, Any] = Field(
         ..., description="Structured event data (agent name, args, result)."
     )
-    agent_run_id: str | None = Field(
-        default=None, description="OTel trace/span correlation ID."
-    )
+    agent_run_id: str | None = Field(default=None, description="OTel trace/span correlation ID.")
 
 
 class ScribeOutput(BaseModel):

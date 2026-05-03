@@ -22,9 +22,7 @@ async def pg_pool() -> Any:
     from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("pgvector/pgvector:pg16").start() as pg:
-        dsn = pg.get_connection_url().replace(
-            "postgresql+psycopg2://", "postgresql://"
-        )
+        dsn = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql://")
         pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
         conn = await pool.acquire()
         try:
@@ -198,6 +196,7 @@ class TestLearningQueueWorker:
             retry_limit=2,
         )
         from uuid import uuid4
+
         case_id = uuid4()
         entry_id = await pg_pool.fetchval(
             """
@@ -245,6 +244,7 @@ class TestLearningQueueWorker:
 
         # Invalid entry (case missing)
         from uuid import uuid4
+
         bad_case = uuid4()
 
         for cid in (case_id_1, bad_case):
@@ -260,10 +260,7 @@ class TestLearningQueueWorker:
 
         # The valid case should be ingested
         row = await pg_pool.fetchrow(
-            (
-                "SELECT ingested_at FROM wolfpack.learning_queue"
-                " WHERE case_id = $1"
-            ),
+            ("SELECT ingested_at FROM wolfpack.learning_queue" " WHERE case_id = $1"),
             str(case_id_1),
         )
         assert row is not None
@@ -271,10 +268,7 @@ class TestLearningQueueWorker:
 
         # The invalid one should have retry_count > 0
         row2 = await pg_pool.fetchrow(
-            (
-                "SELECT retry_count, last_error"
-                " FROM wolfpack.learning_queue WHERE case_id = $1"
-            ),
+            ("SELECT retry_count, last_error" " FROM wolfpack.learning_queue WHERE case_id = $1"),
             str(bad_case),
         )
         assert row2 is not None

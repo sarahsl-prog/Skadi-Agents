@@ -26,9 +26,7 @@ class FirewallAdapter(TelemetrySource):
     )
 
     # Palo Alto: ... src=10.0.0.1 dst=10.0.0.2 ...
-    _PALOALTO_RE = re.compile(
-        r"src=(?P<src>\S+)\s+dst=(?P<dst>\S+)"
-    )
+    _PALOALTO_RE = re.compile(r"src=(?P<src>\S+)\s+dst=(?P<dst>\S+)")
 
     def __init__(self, log_path: str | None = None) -> None:
         self._log_path = log_path
@@ -85,12 +83,15 @@ class FirewallAdapter(TelemetrySource):
             return None
 
         # Parse timestamp
-        ts = datetime.now(UTC)
+        now = datetime.now(UTC)
+        ts = now
         if "month" in match.groupdict():
             ts_str = f"{match.group('month')} {match.group('day')} {match.group('time')}"
             try:
                 ts = datetime.strptime(ts_str, "%b %d %H:%M:%S")
-                ts = ts.replace(year=datetime.now(UTC).year, tzinfo=UTC)
+                ts = ts.replace(year=now.year, tzinfo=UTC)
+                if ts > now:
+                    ts = ts.replace(year=now.year - 1)
             except ValueError:
                 pass
 

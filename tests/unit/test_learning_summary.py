@@ -99,7 +99,7 @@ class TestFormatCaseSummary:
 
     def test_from_case_state_fields(self) -> None:
         case = self._make_case(
-            verdict_decision="malicious",
+            verdict_decision="MALICIOUS",
             overall_confidence=Confidence.STRONG,
         )
         summary = format_case_summary(case)
@@ -191,6 +191,6 @@ class TestFormatCaseSummary:
         assert summary.duration_hours == 0.0
 
     def test_non_benign_false_positive(self) -> None:
-        case = self._make_case(verdict_decision="malicious")
+        case = self._make_case(verdict_decision="MALICIOUS")
         summary = format_case_summary(case)
         assert summary.false_positive is False

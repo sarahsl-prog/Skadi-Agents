@@ -54,14 +54,15 @@ Scribe writes to the ledger in parallel throughout the flow.
 
 | Table | Purpose | Key Columns |
 |---|---|---|
-| `cases` | Case metadata | `id`, `seed_type`, `status`, `created_at`, `verdict` |
+| `cases` | Case metadata | `id`, `seed`, `status`, `version`, `created_at`, `updated_at` |
 | `branches` | Branch sub-states | `id`, `case_id`, `parent_branch_id`, `depth`, `status` |
-| `evidence_ledger` | Immutable audit log | `id`, `case_id`, `branch_id`, `sequence`, `entry_type`, `payload_json`, `prev_hash`, `entry_hash` |
+| `evidence_ledger` | Immutable audit log | `id`, `case_id`, `branch_id`, `entry_type`, `content`, `agent_run_id`, `content_hash`, `prev_hash` |
 | `hypotheses` | Tracker / Flanker outputs | `id`, `case_id`, `branch_id`, `text`, `confidence`, `source` |
-| `pii_store` | Pseudonymised identifiers | `id`, `case_id`, `field_name`, `salt_hash`, `pseudonym` |
+| `pii_salts` | Per-case salt for pseudonymization | `id`, `case_id`, `salt` |
+| `pii_mappings` | Token-to-original mapping (encrypted) | `id`, `case_id`, `token`, `original_value`, `identifier_type` |
 | `breakglass_audit` | Audit of raw-PII access | `id`, `case_id`, `analyst_id`, `field_accessed`, `timestamp`, `justification` |
 | `crypto_shred_keys` | Per-case DEK (wrapped by KEK) | `case_id`, `wrapped_dek`, `kek_id`, `created_at` |
-| `learning_queue` | Approved cases awaiting ingestion | `case_id`, `approved_at`, `ingested_at`, `retry_count` |
+| `learning_queue` | Approved cases awaiting ingestion | `case_id`, `approved_at`, `ingested_at`, `retry_count`, `last_error` |
 
 ### pgvector
 
@@ -73,10 +74,12 @@ RAG embeddings are stored in a `pgvector` column inside Postgres (reuses the exi
 
 | Subject | Payload | Consumers |
 |---|---|---|
-| `wolfpack.cases.<case_id>.tasks` | Task messages (seed, branch task) | Alpha, Tracker, Flanker |
-| `wolfpack.cases.<case_id>.findings` | Hypothesis + evidence updates | Alpha (arbitration), Closer |
-| `wolfpack.cases.<case_id>.branches` | Branch creation requests | Alpha |
-| `wolfpack.cases.<case_id>.status` | State transitions | Scribe, Analyst Console |
+| `hunt.task.alpha` | Case creation / seed dispatch | Alpha Dispatcher |
+| `hunt.finding.tracker` | Tracker hypotheses + evidence | Alpha (arbitration), Closer |
+| `hunt.finding.flanker` | Flanker branches + pivots | Alpha (arbitration), Closer |
+| `hunt.status.verdict` | Verdict assembly complete | Review node |
+| `hunt.status.review` | Analyst decision posted | Alpha, Learning Queue |
+| `hunt.branch.created` | New branch notifications | Scribe, Analyst Console |
 | `wolfpack.alerts` | Operational / security alerts | AlertManager, webhook |
 
 Consumer groups ensure exactly-one processing per case branch.

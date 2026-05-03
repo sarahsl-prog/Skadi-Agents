@@ -89,9 +89,7 @@ class TestPseudonymize:
             token1 = await pseudonymize(mock_pool, "case-1", "val", "user")
             token2 = await pseudonymize(mock_pool, "case-1", "val", "user")
 
-        expected = hmac.new(
-            salt, b"user:val", hashlib.sha256
-        ).hexdigest()[:6]
+        expected = hmac.new(salt, b"user:val", hashlib.sha256).hexdigest()[:6]
         assert token1 == f"user_{expected}"
         assert token1 == token2
 
@@ -103,9 +101,7 @@ class TestDepseudonymize:
         mock_conn.execute.return_value = None
         mock_conn.fetchrow.return_value = {"original_value": "alice@example.com"}
 
-        result = await depseudonymize(
-            mock_pool, "case-1", "user_a42f1e", "analyst-1"
-        )
+        result = await depseudonymize(mock_pool, "case-1", "user_a42f1e", "analyst-1")
 
         assert result == "alice@example.com"
         # Audit was written
@@ -117,9 +113,7 @@ class TestDepseudonymize:
         mock_conn.execute.return_value = None
         mock_conn.fetchrow.return_value = None
 
-        result = await depseudonymize(
-            mock_pool, "case-1", "user_deadbeef", "analyst-1"
-        )
+        result = await depseudonymize(mock_pool, "case-1", "user_deadbeef", "analyst-1")
 
         assert result is None
 
@@ -129,6 +123,4 @@ class TestDepseudonymize:
         mock_conn.execute.side_effect = RuntimeError("DB down")
 
         with pytest.raises(BreakGlassError):
-            await depseudonymize(
-                mock_pool, "case-1", "user_a42f1e", "analyst-1"
-            )
+            await depseudonymize(mock_pool, "case-1", "user_a42f1e", "analyst-1")

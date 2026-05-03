@@ -59,9 +59,7 @@ async def test_postgres_has_pgvector(postgres_container: Any) -> None:
     """Postgres container must have the pgvector extension installed."""
     import asyncpg
 
-    dsn = postgres_container.get_connection_url().replace(
-        "postgresql+psycopg2://", "postgresql://"
-    )
+    dsn = postgres_container.get_connection_url().replace("postgresql+psycopg2://", "postgresql://")
     conn = await asyncpg.connect(dsn)
     try:
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")

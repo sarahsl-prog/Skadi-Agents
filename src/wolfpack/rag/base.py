@@ -7,6 +7,7 @@ pgvector similarity search, backed by Ollama for embeddings.
 from __future__ import annotations
 
 import json
+import re
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -70,24 +71,27 @@ class OllamaEmbedder:
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._timeout = timeout_s
+        self._client = httpx.AsyncClient(timeout=self._timeout)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Return embedding vectors for *texts* via Ollama /api/embed."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{self._base_url}/api/embed",
-                json={"model": self._model, "input": texts},
-            )
-            resp.raise_for_status()
-            data: dict[str, Any] = resp.json()
-            embeddings: list[Any] = data.get("embeddings", [])
-            # Ollama returns list of vectors when input is a list
-            if embeddings and isinstance(embeddings[0], list):
-                return [list(map(float, emb)) for emb in embeddings]
-            # Single vector fallback
-            if embeddings:
-                return [list(map(float, embeddings))]
-            return []
+        resp = await self._client.post(
+            f"{self._base_url}/api/embed",
+            json={"model": self._model, "input": texts},
+        )
+        resp.raise_for_status()
+        data: dict[str, Any] = resp.json()
+        embeddings: list[Any] = data.get("embeddings", [])
+        # Ollama returns list of vectors when input is a list
+        if embeddings and isinstance(embeddings[0], list):
+            return [list(map(float, emb)) for emb in embeddings]
+        # Single vector fallback
+        if embeddings:
+            return [list(map(float, embeddings))]
+        return []
+
+    async def close(self) -> None:
+        await self._client.aclose()
 
     @classmethod
     def from_llm_config(cls, cfg: LLMConfig) -> OllamaEmbedder:
@@ -106,38 +110,53 @@ class PGVectorStore:
     search.  The schema is namespaced per pipeline via *table_name*.
     """
 
+    # Allowlist of safe table name characters: alphanumeric and underscore only
+    _TABLE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+    # Allowlist of safe filter key characters: alphanumeric, underscore, hyphen, dot
+    _FILTER_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.\-]*$")
+    _ALLOWED_TABLES: frozenset[str] = frozenset()
+
     def __init__(
         self,
         pool: asyncpg.Pool,
         table_name: str,
         vector_dim: int = 768,
         embedder: OllamaEmbedder | None = None,
+        allowed_tables: frozenset[str] | None = None,
     ) -> None:
+        if allowed_tables is not None:
+            PGVectorStore._ALLOWED_TABLES = allowed_tables
+        if PGVectorStore._ALLOWED_TABLES and table_name not in PGVectorStore._ALLOWED_TABLES:
+            raise ValueError(f"table_name {table_name!r} not in allowlist")
+        if not self._TABLE_NAME_RE.match(table_name):
+            raise ValueError(f"table_name contains invalid characters: {table_name!r}")
         self._pool = pool
         self._table = table_name
         self._vector_dim = vector_dim
         self._embedder = embedder
 
+    @staticmethod
+    def _validate_top_k(top_k: int) -> None:
+        if not isinstance(top_k, int) or not (1 <= top_k <= 200):
+            raise ValueError(f"top_k must be an integer between 1 and 200, got {top_k!r}")
+
     async def ensure_schema(self) -> None:
         """Create the table and vector index if they do not exist."""
         async with self._pool.acquire() as conn:
-            await conn.execute(
-                f"""
+            await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            await conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self._table} (
                     id TEXT PRIMARY KEY,
                     content TEXT NOT NULL,
                     metadata JSONB DEFAULT '{{}}',
                     embedding VECTOR({self._vector_dim})
                 )
-                """
-            )
-            await conn.execute(
-                f"""
+                """)
+            await conn.execute(f"""
                 CREATE INDEX IF NOT EXISTS {self._table}_embedding_idx
                 ON {self._table}
                 USING ivfflat (embedding vector_cosine_ops)
-                """
-            )
+                """)
 
     @staticmethod
     def _format_vector(vec: list[float]) -> str:
@@ -156,8 +175,11 @@ class PGVectorStore:
             embeddings = [[0.0] * self._vector_dim for _ in documents]
         async with self._pool.acquire() as conn:
             for doc, emb in zip(documents, embeddings, strict=True):
-                _sql = (
-                    f"""
+                if len(emb) != self._vector_dim:
+                    raise ValueError(
+                        f"Embedding dimension mismatch: expected {self._vector_dim}, got {len(emb)}"
+                    )
+                _sql = f"""
                     INSERT INTO {self._table} (id, content, metadata, embedding)
                     VALUES ($1, $2, $3, $4::vector)
                     ON CONFLICT (id) DO UPDATE SET
@@ -165,7 +187,6 @@ class PGVectorStore:
                         metadata = EXCLUDED.metadata,
                         embedding = EXCLUDED.embedding
                     """  # noqa: S608
-                )
                 await conn.execute(
                     _sql,
                     doc.id,
@@ -181,18 +202,20 @@ class PGVectorStore:
         filters: dict[str, Any] | None = None,
     ) -> list[RAGDocument]:
         """Cosine-similarity search over the vector column."""
+        self._validate_top_k(top_k)
         where_clause = ""
         params: list[Any] = [self._format_vector(query_embedding), top_k]
         if filters:
             conditions = []
             for key, value in filters.items():
+                if not self._FILTER_KEY_RE.match(key):
+                    raise ValueError(f"Invalid filter key: {key!r}")
                 conditions.append(f"metadata->>'{key}' = ${len(params) + 1}")
                 params.append(value)
             where_clause = "WHERE " + " AND ".join(conditions)
 
         async with self._pool.acquire() as conn:
-            _sql = (
-                f"""
+            _sql = f"""
                 SELECT id, content, metadata,
                        1 - (embedding <=> $1::vector) AS score
                 FROM {self._table}
@@ -200,7 +223,6 @@ class PGVectorStore:
                 ORDER BY embedding <=> $1::vector
                 LIMIT $2
                 """  # noqa: S608
-            )
             rows = await conn.fetch(_sql, *params)
         return [
             RAGDocument(
@@ -222,14 +244,13 @@ class PGVectorStore:
         filters: dict[str, Any] | None = None,
     ) -> list[RAGDocument]:
         """Embed *query* and run similarity search."""
+        self._validate_top_k(top_k)
         if self._embedder is None:
             return []
         embeddings = await self._embedder.embed([query])
         if not embeddings:
             return []
-        return await self.query_by_embedding(
-            embeddings[0], top_k=top_k, filters=filters
-        )
+        return await self.query_by_embedding(embeddings[0], top_k=top_k, filters=filters)
 
     async def keyword_search(
         self,
@@ -238,18 +259,20 @@ class PGVectorStore:
         filters: dict[str, Any] | None = None,
     ) -> list[RAGDocument]:
         """Full-text search using Postgres tsvector (fallback when no embedding)."""
+        self._validate_top_k(top_k)
         where_clause = ""
         params: list[Any] = [query, top_k]
         if filters:
             conditions = []
             for key, value in filters.items():
+                if not self._FILTER_KEY_RE.match(key):
+                    raise ValueError(f"Invalid filter key: {key!r}")
                 conditions.append(f"metadata->>'{key}' = ${len(params) + 1}")
                 params.append(value)
             where_clause = "WHERE " + " AND ".join(conditions)
 
         async with self._pool.acquire() as conn:
-            _sql = (
-                f"""
+            _sql = f"""
                 SELECT id, content, metadata,
                        ts_rank(
                            to_tsvector('english', content),
@@ -260,7 +283,6 @@ class PGVectorStore:
                 ORDER BY score DESC
                 LIMIT $2
                 """  # noqa: S608
-            )
             rows = await conn.fetch(_sql, *params)
         return [
             RAGDocument(

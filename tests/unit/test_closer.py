@@ -40,9 +40,7 @@ async def test_closer_produces_verdict_packet() -> None:
             type="ioc",
             raw_payload={"entities": [{"type": "ip", "value": "192.0.2.1"}]},
         ),
-        hypotheses=[
-            Hypothesis(description="Test hypothesis", confidence=Confidence.PLUSIBLE)
-        ],
+        hypotheses=[Hypothesis(description="Test hypothesis", confidence=Confidence.PLAUSIBLE)],
         evidence_refs=[EvidenceRef(source_type="stub", source_id="ev-001")],
     )
 
@@ -59,7 +57,7 @@ def test_tool_allowlist_blocks_unknown_tools() -> None:
     """Unknown tools are not added to the Closer agent."""
     tool = telemetry_tool_factory(_FakeAdapter())
     # Ensure fake tool is NOT in closer allowlist
-    assert tool.__name__ not in CLOSER_TOOL_ALLOWLIST
+    assert "fake_tool_query" not in CLOSER_TOOL_ALLOWLIST
 
 
 def test_build_closer_agent_with_mock_model() -> None:

@@ -12,8 +12,8 @@ from wolfpack.schemas.agents.scribe import ScribeInput, ScribeOutput
 from wolfpack.schemas.ledger import insert_ledger_entry
 from wolfpack.schemas.persistence import PersistencePool
 
-# Scribe has no external tool exposure; it only writes to the ledger.
-SCRIBE_TOOL_ALLOWLIST: frozenset[str] = frozenset()
+# Scribe is non-LLM; its allowlist is minimal (ledger/timeline only).
+SCRIBE_TOOL_ALLOWLIST: frozenset[str] = frozenset({"write_ledger_entry", "write_timeline_event"})
 
 
 class ScribeInterface:
@@ -51,6 +51,7 @@ class ScribeInterface:
         case_id: str,
         event_type: str,
         description: str,
+        agent_run_id: str | None = None,
     ) -> int:
         """Append a structured timeline event to the ledger.
 
@@ -64,6 +65,7 @@ class ScribeInterface:
             case_id,
             "timeline_event",
             {"event_type": event_type, "description": description},
+            agent_run_id=agent_run_id,
         )
 
     async def process(self, input: ScribeInput) -> ScribeOutput:

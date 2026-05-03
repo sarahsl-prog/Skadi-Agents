@@ -19,10 +19,7 @@ from wolfpack.llm.factory import get_model
 from wolfpack.observability.agents import traced_agent_run
 from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
 from wolfpack.schemas.case_state import CaseState
-from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.entity import Entity
-from wolfpack.schemas.evidence import EvidenceRef
-from wolfpack.schemas.hypothesis import Hypothesis
 
 # ------------------------------------------------------------------ #
 # Models
@@ -41,24 +38,10 @@ class TrackerInput(BaseModel):
         ),
         description="Look-back window for telemetry queries.",
     )
-    seed_description: str = Field(
-        default="", description="Free-text seed from the analyst."
-    )
+    seed_description: str = Field(default="", description="Free-text seed from the analyst.")
 
 
-class TrackerOutput(BaseModel):
-    """What the Tracker produces."""
-
-    hypotheses: list[Hypothesis] = Field(default_factory=list)
-    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
-    confidence: Confidence = Field(
-        default=Confidence.PLAUSIBLE,
-        description="Calibrated confidence based on evidence volume and diversity.",
-    )
-    reasoning: str = Field(
-        default="", description="Concise human-readable reasoning."
-    )
-
+from wolfpack.schemas.agents.tracker import TrackerOutput
 
 # ------------------------------------------------------------------ #
 # Dependencies
@@ -132,29 +115,68 @@ Rules:
 def _build_tracker_agent(
     cfg: Any | None = None,
     model: Any | None = None,
+    deps: TrackerDeps | None = None,
 ) -> Agent[Any, TrackerOutput]:
     """Build the Tracker Pydantic AI agent with tools and system prompt."""
     if model is None:
         from wolfpack.config.settings import LLMConfig
 
         if cfg is None:
-            cfg = LLMConfig(
-                provider="ollama", model="llama3.2", base_url="http://localhost:11434"
-            )
+            cfg = LLMConfig(provider="ollama", model="llama3.2", base_url="http://localhost:11434")
         model = get_model(cfg)
 
-    rag_tools: list[Any] = [
-        threat_intel_tool,
-        case_history_tool,
-    ]
-    adapter_tools: list[Any] = []
-    _validate_tools(rag_tools)
+    tools: list[Any] = []
+
+    # Wire RAG tools via deps when available
+    rag = deps.rag if deps else None
+    if rag is not None:
+        from wolfpack.observability.rag_tools import traced_retrieve
+        from wolfpack.rag.tools import RAGResult, _build_answer
+
+        async def _threat_intel(query: str, top_k: int = 5) -> Any:
+            pipeline = rag.threat_intel
+            if pipeline is None:
+                return RAGResult(source="threat_intel", answer="")
+            docs = await traced_retrieve("threat_intel", pipeline.retrieve)(query, top_k=top_k)
+            return RAGResult(source="threat_intel", documents=docs, answer=_build_answer(docs))
+
+        _threat_intel.__name__ = "threat_intel_tool"
+        _threat_intel.__doc__ = threat_intel_tool.__doc__
+        tools.append(_threat_intel)
+
+        async def _case_history(query: str, top_k: int = 5) -> Any:
+            pipeline = rag.case_history
+            if pipeline is None:
+                return RAGResult(source="case_history", answer="")
+            docs = await traced_retrieve("case_history", pipeline.retrieve)(query, top_k=top_k)
+            return RAGResult(source="case_history", documents=docs, answer=_build_answer(docs))
+
+        _case_history.__name__ = "case_history_tool"
+        _case_history.__doc__ = case_history_tool.__doc__
+        tools.append(_case_history)
+    else:
+        tools.extend([threat_intel_tool, case_history_tool])
+
+    # Wire adapter tools via deps when available
+    adapter_deps = deps.adapters if deps else None
+    if adapter_deps is not None and adapter_deps.adapters:
+        from wolfpack.adapters.tools import build_adapter_tools
+
+        adapter_tools = build_adapter_tools(
+            list(adapter_deps.adapters.values()),
+            feature_flags={},
+        )
+        for name, fn in adapter_tools.items():
+            if name in TRACKER_TOOL_ALLOWLIST:
+                tools.append(fn)
+
+    _validate_tools(tools)
 
     agent = Agent(
         model=model,
         output_type=TrackerOutput,
         system_prompt=_SYSTEM_PROMPT,
-        tools=rag_tools + adapter_tools,
+        tools=tools,
     )
     return agent
 
@@ -185,9 +207,7 @@ async def run_tracker(
     entities = seed.raw_payload.get("entities", []) if isinstance(seed.raw_payload, dict) else []
     if not entities and state.branches:
         # Fallback: use entities from the root branch
-        entities = [
-            e.model_dump() for b in state.branches for e in b.entities
-        ]
+        entities = [e.model_dump() for b in state.branches for e in b.entities]
 
     time_window = TimeWindow(
         start=datetime.now(UTC) - timedelta(hours=24),
@@ -201,7 +221,7 @@ async def run_tracker(
         seed_description=str(seed.raw_payload),
     )
 
-    agent = _build_tracker_agent(model=model)
+    agent = _build_tracker_agent(model=model, deps=deps)
     result = await traced_agent_run(
         "tracker",
         agent,
@@ -214,7 +234,7 @@ async def run_tracker(
     return {
         "hypotheses": [h.model_dump() for h in output.hypotheses],
         "evidence_refs": [e.model_dump() for e in output.evidence_refs],
-        "tracker_confidence": output.confidence,
+        "tracker_confidence": output.tracker_confidence,
         "status": "shadowing",
         "reasoning": output.reasoning,
     }

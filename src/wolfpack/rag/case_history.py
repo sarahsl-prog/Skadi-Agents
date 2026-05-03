@@ -87,20 +87,18 @@ class CaseHistoryPipeline(RAGPipeline):
             candidates.append((doc, score, "semantic"))
 
         # Keyword search (fallback / tie-breaker)
-        keyword_results = await self._store.keyword_search(
-            query, top_k=top_k * 2, filters=filters
-        )
+        keyword_results = await self._store.keyword_search(query, top_k=top_k * 2, filters=filters)
         for rank, doc in enumerate(keyword_results):
             score = 1.0 - (rank / max(len(keyword_results), 1))
             candidates.append((doc, score, "keyword"))
 
-        # Deduplicate by id and fuse scores
+        # Deduplicate by id and fuse scores additively
         fused: dict[str, tuple[RAGDocument, float]] = {}
         for doc, score, modality in candidates:
             alpha = 0.7 if modality == "semantic" else 0.3
             if doc.id in fused:
                 existing_doc, existing_score = fused[doc.id]
-                fused[doc.id] = (existing_doc, max(existing_score, score * alpha))
+                fused[doc.id] = (existing_doc, existing_score + score * alpha)
             else:
                 fused[doc.id] = (doc, score * alpha)
 

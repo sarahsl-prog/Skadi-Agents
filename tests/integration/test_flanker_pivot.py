@@ -5,8 +5,6 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-import pytest
-
 from wolfpack.orchestrator.graph import build_hunt_graph
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.confidence import Confidence

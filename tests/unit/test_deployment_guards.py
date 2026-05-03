@@ -31,7 +31,7 @@ from wolfpack.config.deployment import DeploymentMode, is_loopback_or_private
         ("http://my-remote-server.example.com", False),
         # Edge cases
         ("http://", False),
-        ("localhost:11434", False),   # urlparse treats schemeless as path
+        ("localhost:11434", False),  # urlparse treats schemeless as path
         ("", False),
     ],
 )

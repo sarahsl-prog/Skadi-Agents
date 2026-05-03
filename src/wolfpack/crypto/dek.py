@@ -46,7 +46,8 @@ async def get_wrapped_dek(
     try:
         row = await conn.fetchrow(
             "SELECT wrapped_dek, kek_id FROM wolfpack.crypto_shred_keys "
-            "WHERE case_id = $1 AND shredded_at IS NULL",
+            "WHERE case_id = $1 AND shredded_at IS NULL "
+            "ORDER BY created_at DESC LIMIT 1",
             case_id,
         )
         if row is None:

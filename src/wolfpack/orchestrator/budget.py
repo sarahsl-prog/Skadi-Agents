@@ -5,7 +5,7 @@ Enforces per-case limits on branch depth and branch count.
 
 from __future__ import annotations
 
-import threading
+import asyncio
 from dataclasses import dataclass
 
 from wolfpack.config.settings import BranchBudgetConfig, Settings
@@ -32,7 +32,7 @@ class BranchBudget:
             config = Settings().branch_budget
         self._config = config
         self._state: dict[str, dict[str, int]] = {}
-        self._lock = threading.Lock()
+        self._lock = asyncio.Lock()
 
     def _ensure(self, case_id: str) -> dict[str, int]:
         if case_id not in self._state:
@@ -41,7 +41,7 @@ class BranchBudget:
             }
         return self._state[case_id]
 
-    def check(
+    async def check(
         self,
         case_id: str,
         branch_depth: int,
@@ -54,45 +54,66 @@ class BranchBudget:
             branch_depth: Proposed branch depth (0 = root).
             branches_so_far: Override branch count (uses internal counter if ``None``).
         """
-        state = self._ensure(case_id)
-        branches = branches_so_far if branches_so_far is not None else state["branch_count"]
+        async with self._lock:
+            state = self._ensure(case_id)
+            current_count = (
+                branches_so_far if branches_so_far is not None else state["branch_count"]
+            )
 
-        if branch_depth > self._config.max_depth:
-            return False
-        if branches >= self._config.max_branches_per_case:
-            return False
-        return True
+            if branch_depth > self._config.max_depth:
+                return False
+            if current_count >= self._config.max_branches_per_case:
+                return False
+            return True
 
-    def remaining(
+    async def remaining(
         self,
         case_id: str,
         branches_so_far: int | None = None,
     ) -> BudgetRemaining:
         """Return the remaining budget for *case_id*."""
-        state = self._ensure(case_id)
-        branches = branches_so_far if branches_so_far is not None else state["branch_count"]
+        async with self._lock:
+            state = self._ensure(case_id)
+            current_count = (
+                branches_so_far if branches_so_far is not None else state["branch_count"]
+            )
 
-        return BudgetRemaining(
-            branches_remaining=max(0, self._config.max_branches_per_case - branches),
-            depth_remaining=self._config.max_depth,
-        )
+            return BudgetRemaining(
+                branches_remaining=max(0, self._config.max_branches_per_case - current_count),
+                depth_remaining=self._config.max_depth,
+            )
+
+    def release(
+        self,
+        case_id: str,
+        *,
+        branches: int = 1,
+    ) -> None:
+        """Release previously consumed budget for *case_id*.
+
+        Called when a branch creation fails after budget was consumed,
+        so the count is not permanently leaked.
+        """
+        state = self._ensure(case_id)
+        state["branch_count"] = max(0, state["branch_count"] - branches)
 
     def consume(
         self,
         case_id: str,
         *,
-        branches: int = 0,
+        branches: int = 1,
     ) -> None:
         """Consume budget for *case_id*.
 
         Called by the graph after a branch is created so that subsequent
         checks see the updated counter.
         """
-        with self._lock:
-            state = self._ensure(case_id)
-            state["branch_count"] += branches
+        # Synchronous consume for backward compatibility with sync call sites.
+        # In async context, prefer check_and_consume.
+        state = self._ensure(case_id)
+        state["branch_count"] += branches
 
-    def check_and_consume(
+    async def check_and_consume(
         self,
         case_id: str,
         branch_depth: int,
@@ -105,13 +126,13 @@ class BranchBudget:
         implementation.  For multi-process deployments back this with
         Redis ``INCR`` or Postgres ``UPDATE ... RETURNING``.
         """
-        with self._lock:
+        async with self._lock:
             state = self._ensure(case_id)
-            branches = state["branch_count"]
+            current_count = state["branch_count"]
 
             if branch_depth > self._config.max_depth:
                 return False
-            if branches >= self._config.max_branches_per_case:
+            if current_count >= self._config.max_branches_per_case:
                 return False
 
             state["branch_count"] += branches

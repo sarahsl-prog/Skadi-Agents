@@ -49,10 +49,10 @@ async def create_branch(
         # Prefer atomic check-and-consume; fall back to separate check
         # when branches_so_far is supplied by the caller.
         if branches_so_far:
-            if not budget.check(case_id, depth, branches_so_far):
+            if not await budget.check(case_id, depth, branches_so_far):
                 return None
         else:
-            if not budget.check_and_consume(case_id, depth, branches=1):
+            if not await budget.check_and_consume(case_id, depth, branches=1):
                 return None
 
     from wolfpack.schemas.hypothesis import Hypothesis
@@ -78,7 +78,12 @@ async def create_branch(
         updated_at=datetime.now(UTC),
     )
 
-    await persistence.create_branch(branch)
+    try:
+        await persistence.create_branch(branch)
+    except Exception:
+        if budget is not None and not branches_so_far:
+            budget.release(case_id, branches=1)
+        return None
 
     if budget is not None and branches_so_far:
         budget.consume(case_id, branches=1)

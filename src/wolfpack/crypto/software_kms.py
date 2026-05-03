@@ -39,15 +39,11 @@ class SoftwareKMS(KMSInterface):
         kek = self._load_kek(kek_id)
         nonce = os.urandom(_NONCE_SIZE)
         aesgcm = AESGCM(kek)
-        ciphertext = aesgcm.encrypt(nonce, dek, None)
+        aad = kek_id.encode("utf-8")
+        ciphertext = aesgcm.encrypt(nonce, dek, aad)
         kek_id_bytes = kek_id.encode("utf-8")
         # Format: kek_id_len (2 bytes) | kek_id | nonce | ciphertext
-        return (
-            struct.pack("!H", len(kek_id_bytes))
-            + kek_id_bytes
-            + nonce
-            + ciphertext
-        )
+        return struct.pack("!H", len(kek_id_bytes)) + kek_id_bytes + nonce + ciphertext
 
     async def unwrap_key(self, wrapped_dek: bytes, kek_id: str) -> bytes:
         """Unwrap *wrapped_dek* with the KEK identified by *kek_id*."""
@@ -59,14 +55,13 @@ class SoftwareKMS(KMSInterface):
             raise ValueError("wrapped_dek too short for nonce")
         stored_kek_id = wrapped_dek[2 : 2 + kek_id_len].decode("utf-8")
         if stored_kek_id != kek_id:
-            raise ValueError(
-                f"KEK ID mismatch: expected {kek_id!r}, got {stored_kek_id!r}"
-            )
+            raise ValueError(f"KEK ID mismatch: expected {kek_id!r}, got {stored_kek_id!r}")
         nonce = wrapped_dek[2 + kek_id_len : offset]
         ciphertext = wrapped_dek[offset:]
         kek = self._load_kek(kek_id)
         aesgcm = AESGCM(kek)
-        return aesgcm.decrypt(nonce, ciphertext, None)
+        aad = kek_id.encode("utf-8")
+        return aesgcm.decrypt(nonce, ciphertext, aad)
 
     async def rotate_kek(self, kek_id: str) -> str:
         """Generate a new KEK and return its identifier.
@@ -84,7 +79,10 @@ class SoftwareKMS(KMSInterface):
 
     def _generate_kek(self) -> str:
         kek = os.urandom(_KEK_SIZE)
-        kek_id = f"kek_{kek.hex()[:16]}"
+        # Use a random UUID-like suffix instead of key hex to avoid leaking key material
+        import uuid
+
+        kek_id = f"kek_{uuid.uuid4().hex}"
         kek_path = self._keystore_dir / kek_id
         kek_path.write_bytes(kek)
         return kek_id

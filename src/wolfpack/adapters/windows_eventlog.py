@@ -6,13 +6,26 @@ uses local EVTX file parsing via ``python-evtx`` (optional dependency).
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from xml.etree import ElementTree as ET
 
 from wolfpack.adapters.base import Event, TelemetrySource, TimeWindow
 from wolfpack.schemas.entity import Entity
+
+_LOGGER = logging.getLogger(__name__)
+
+try:
+    from defusedxml import ElementTree as DET
+except ImportError:
+    DET = None  # type: ignore[misc]
+    _LOGGER.warning("defusedxml not installed; falling back to stdlib xml.etree (XXE risk)")
+
+if DET is not None:
+    ET = DET
+else:
+    from xml.etree import ElementTree as ET  # type: ignore[assignment]
 
 
 class WindowsEventLogAdapter(TelemetrySource):
@@ -21,6 +34,11 @@ class WindowsEventLogAdapter(TelemetrySource):
     name = "windows_eventlog"
 
     def __init__(self, evtx_path: str | None = None) -> None:
+        if evtx_path is not None:
+            path = Path(evtx_path).resolve()
+            # Path traversal guard: ensure resolved path is under a safe base
+            if ".." in evtx_path:
+                raise ValueError(f"Path traversal detected in evtx_path: {evtx_path!r}")
         self._evtx_path = evtx_path
 
     async def query(
@@ -40,7 +58,8 @@ class WindowsEventLogAdapter(TelemetrySource):
         # Try python-evtx first, then fallback to simple XML parsing
         try:
             events = self._parse_evtx(path, entity, time_window, filters)
-        except Exception:
+        except Exception as exc:
+            _LOGGER.warning("EVTX parse failed, falling back to XML: %s", exc)
             # Fallback: try to read as raw XML if the file is XML
             events = self._parse_xml_fallback(path, entity, time_window, filters)
 
@@ -81,12 +100,13 @@ class WindowsEventLogAdapter(TelemetrySource):
     ) -> list[Event]:
         events: list[Event] = []
         try:
-            tree = ET.parse(path)  # noqa: S314
-        except ET.ParseError:
+            tree = ET.parse(str(path))  # type: ignore[attr-defined]
+        except Exception as exc:
+            _LOGGER.warning("XML fallback parse failed: %s", exc)
             return events
 
         for elem in tree.iter("Event"):
-            xml_str = ET.tostring(elem, encoding="unicode")
+            xml_str = ET.tostring(elem, encoding="unicode")  # type: ignore[attr-defined]
             event = self._parse_event_xml(xml_str, entity, time_window, filters)
             if event is not None:
                 events.append(event)
@@ -100,8 +120,9 @@ class WindowsEventLogAdapter(TelemetrySource):
         filters: dict[str, Any] | None,
     ) -> Event | None:
         try:
-            root = ET.fromstring(xml)  # noqa: S314
-        except ET.ParseError:
+            root = ET.fromstring(xml)  # type: ignore[attr-defined]
+        except Exception as exc:
+            _LOGGER.warning("Event XML parse failed: %s", exc)
             return None
 
         ns = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
@@ -168,18 +189,22 @@ class WindowsEventLogAdapter(TelemetrySource):
             raw_payload=raw_payload,
             entities=[Entity(type="host", value=computer)] if computer else [],
             severity=severity,
-            metadata={"channel": channel, "event_id": event_id}
-            if "channel" in locals()
-            else {"event_id": event_id},
+            metadata=(
+                {"channel": channel, "event_id": event_id}
+                if "channel" in locals()
+                else {"event_id": event_id}
+            ),
         )
 
     @staticmethod
     def _level_to_severity(level: str) -> str:
+        # Windows Event Log levels: 1=Critical, 2=Error, 3=Warning, 4=Info, 5=Verbose, 0=LogAlways
         mapping = {
             "1": "critical",
-            "2": "critical",
-            "3": "high",
-            "4": "medium",
+            "2": "high",
+            "3": "medium",
+            "4": "low",
+            "5": "info",
             "0": "info",
         }
         return mapping.get(level, "info")

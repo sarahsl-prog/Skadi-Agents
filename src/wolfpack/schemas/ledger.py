@@ -14,9 +14,7 @@ class LedgerIntegrityError(Exception):
     """Raised when the evidence ledger chain fails verification."""
 
 
-async def verify_chain(
-    conn: asyncpg.Connection, case_id: str
-) -> tuple[bool, int | None]:
+async def verify_chain(conn: asyncpg.Connection, case_id: str) -> tuple[bool, int | None]:
     """Verify the integrity of a case's evidence ledger chain.
 
     Calls the Postgres ``wolfpack.verify_chain`` SQL function which
@@ -33,9 +31,7 @@ async def verify_chain(
     return is_valid, broken_at
 
 
-async def replay_ledger(
-    conn: asyncpg.Connection, case_id: str
-) -> list[EvidenceRef]:
+async def replay_ledger(conn: asyncpg.Connection, case_id: str) -> list[EvidenceRef]:
     """Fetch and return all ledger entries for a case, validating chain integrity.
 
     Raises:
@@ -43,13 +39,10 @@ async def replay_ledger(
     """
     is_valid, broken_at = await verify_chain(conn, case_id)
     if not is_valid:
-        raise LedgerIntegrityError(
-            f"Ledger chain broken for case {case_id} at entry {broken_at}"
-        )
+        raise LedgerIntegrityError(f"Ledger chain broken for case {case_id} at entry {broken_at}")
 
     rows = await conn.fetch(
-        "SELECT content FROM wolfpack.evidence_ledger "
-        "WHERE case_id = $1 ORDER BY seq ASC",
+        "SELECT content FROM wolfpack.evidence_ledger " "WHERE case_id = $1 ORDER BY seq ASC",
         case_id,
     )
     return [

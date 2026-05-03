@@ -1,5 +1,7 @@
 """Closer agent I/O models."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from wolfpack.schemas.confidence import Confidence
@@ -30,13 +32,17 @@ class CloserOutput(BaseModel):
     next-best action, and evidence references.
     """
 
-    decision: str = Field(
-        ..., description="Verdict: benign, suspicious, malicious, inconclusive."
+    decision: Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] = (
+        Field(
+            ...,
+            description="Verdict: MALICIOUS, BENIGN, INCONCLUSIVE, NEEDS_MORE_INFO, or SUSPICIOUS.",
+        )
     )
     confidence: Confidence = Field(..., description="Closer's confidence in the verdict.")
-    next_best_action: str = Field(
-        default="", description="Recommended next step for the analyst."
-    )
+    next_best_action: str = Field(default="", description="Recommended next step for the analyst.")
     evidence_refs: list[EvidenceRef] = Field(
         default_factory=list, description="Evidence supporting the verdict."
+    )
+    reasoning_summary: str = Field(
+        default="", description="Concise human-readable reasoning for the verdict."
     )

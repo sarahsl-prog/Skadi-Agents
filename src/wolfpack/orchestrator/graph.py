@@ -63,10 +63,7 @@ def _route_after_review(state: CaseState) -> str:
     return END
 
 
-NodeFn = (
-    Callable[[CaseState], dict[str, Any]]
-    | Callable[[CaseState], Awaitable[dict[str, Any]]]
-)
+NodeFn = Callable[[CaseState], dict[str, Any]] | Callable[[CaseState], Awaitable[dict[str, Any]]]
 
 
 def _wrap_with_nats(
@@ -91,16 +88,13 @@ def _wrap_with_nats(
                 sanitized[key] = _sanitize_payload(value)
             elif isinstance(value, list):
                 sanitized[key] = [
-                    _sanitize_payload(item) if isinstance(item, dict) else item
-                    for item in value
+                    _sanitize_payload(item) if isinstance(item, dict) else item for item in value
                 ]
             else:
                 sanitized[key] = value
         return sanitized
 
-    async def _publish_safe(
-        subject: str, payload: dict[str, Any]
-    ) -> None:
+    async def _publish_safe(subject: str, payload: dict[str, Any]) -> None:
         """Publish to NATS with timeout and error logging."""
         try:
             sanitized = _sanitize_payload(payload)
@@ -108,7 +102,7 @@ def _wrap_with_nats(
                 nats_client.publish(subject, sanitized),
                 timeout=5.0,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # TODO: write ``nats_publish_failed`` entry to evidence ledger
             import logging
 
@@ -117,7 +111,7 @@ def _wrap_with_nats(
             )
 
     async def _async_wrapped(state: CaseState) -> dict[str, Any]:
-        result = node(state)
+        result = await node(state)
         await _publish_safe(subject, result)
         return result  # type: ignore[return-value]
 
@@ -132,8 +126,7 @@ def _wrap_with_nats(
             asyncio.run(_publish_safe(subject, result))
         return result  # type: ignore[return-value]
 
-    # Prefer sync wrapper to keep graph topology simple in Phase 2.
-    return _sync_wrapped
+    return _async_wrapped if asyncio.iscoroutinefunction(node) else _sync_wrapped
 
 
 def build_hunt_graph(
@@ -189,8 +182,15 @@ def build_hunt_graph(
         if scribe is None:
             scribe = stub_scribe
 
-    if alpha is None or tracker is None or flanker is None or closer is None or review is None:
-        raise RuntimeError("All main agent nodes must be provided or use_stubs=True")
+    if (
+        alpha is None
+        or tracker is None
+        or flanker is None
+        or closer is None
+        or review is None
+        or scribe is None
+    ):
+        raise RuntimeError("All agent nodes (including scribe) must be provided or use_stubs=True")
 
     # Wrap every node with OTel tracing before (optionally) wiring NATS.
     alpha = traced_node("alpha_dispatcher", alpha)
@@ -201,7 +201,7 @@ def build_hunt_graph(
     scribe = traced_node("scribe", scribe)
 
     if nats_client is not None:
-        alpha = _wrap_with_nats(alpha, "hunt.task.tracker", nats_client)
+        alpha = _wrap_with_nats(alpha, "hunt.task.alpha", nats_client)
         tracker = _wrap_with_nats(tracker, "hunt.finding.tracker", nats_client)
         flanker = _wrap_with_nats(flanker, "hunt.finding.flanker", nats_client)
         closer = _wrap_with_nats(closer, "hunt.status.verdict", nats_client)

@@ -128,9 +128,9 @@ def test_mlflow_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.parametrize(
     "bad_url",
     [
-        "localhost:11434",      # no scheme
+        "localhost:11434",  # no scheme
         "ftp://localhost:11434",  # wrong scheme
-        "file:///etc/passwd",    # wrong scheme
+        "file:///etc/passwd",  # wrong scheme
     ],
 )
 def test_llm_config_rejects_invalid_url_scheme(

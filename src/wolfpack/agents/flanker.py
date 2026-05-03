@@ -10,7 +10,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from wolfpack.adapters.base import TimeWindow
@@ -20,10 +19,6 @@ from wolfpack.observability.agents import traced_agent_run
 from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
 from wolfpack.schemas.agents.flanker import FlankerInput, FlankerOutput
 from wolfpack.schemas.case_state import CaseState
-from wolfpack.schemas.confidence import Confidence
-from wolfpack.schemas.entity import Entity
-from wolfpack.schemas.evidence import EvidenceRef
-from wolfpack.schemas.hypothesis import Hypothesis
 
 # ------------------------------------------------------------------ #
 # Dependencies
@@ -116,9 +111,7 @@ def _build_flanker_agent(
         from wolfpack.config.settings import LLMConfig
 
         if cfg is None:
-            cfg = LLMConfig(
-                provider="ollama", model="llama3.2", base_url="http://localhost:11434"
-            )
+            cfg = LLMConfig(provider="ollama", model="llama3.2", base_url="http://localhost:11434")
         model = get_model(cfg)
 
     # Merge caller-supplied flags with canonical Settings so that
@@ -128,7 +121,7 @@ def _build_flanker_agent(
     canonical = Settings().feature_flags
     caller_flags = feature_flags or {}
     # A caller may only *disable* an adapter; enabling requires config.
-    feature_flags = {
+    effective_flags = {
         **canonical,
         **{k: v for k, v in caller_flags.items() if v is False},
     }
@@ -139,7 +132,6 @@ def _build_flanker_agent(
     ]
 
     # Build adapter tools based on feature flags
-    from wolfpack.adapters.tools import build_adapter_tools
     from wolfpack.adapters import (
         CloudTrailSource,
         CrowdStrikeAdapter,
@@ -151,6 +143,7 @@ def _build_flanker_agent(
         WindowsEventLogAdapter,
         ZeekSuricataSource,
     )
+    from wolfpack.adapters.tools import build_adapter_tools
 
     all_adapters = [
         SyslogAdapter(),
@@ -163,7 +156,7 @@ def _build_flanker_agent(
         ProxySource(),
         CloudTrailSource(),
     ]
-    adapter_tools_map = build_adapter_tools(all_adapters, feature_flags=feature_flags)
+    adapter_tools_map = build_adapter_tools(all_adapters, feature_flags=effective_flags)
     adapter_tools = list(adapter_tools_map.values())
 
     all_tools = rag_tools + adapter_tools
@@ -208,11 +201,13 @@ async def run_flanker(
     if state.branches:
         for branch in state.branches:
             entities.extend(branch.entities)
+
+    # Collect case-level hypotheses (those not tied to a specific branch)
+    case_level_hypotheses = []
     if state.hypotheses:
         for hyp in state.hypotheses:
-            if hyp.branch_id:
-                # branch-level hypothesis; skip for case-level flanker
-                pass
+            if not hyp.branch_id:
+                case_level_hypotheses.append(hyp)
 
     # Deduplicate entities by value
     seen = set()
@@ -230,9 +225,9 @@ async def run_flanker(
 
     flanker_input = FlankerInput(
         case_id=state.case_id,
-        branch_id=state.branches[0].branch_id if state.branches else state.case_id,
+        branch_id=state.branches[-1].branch_id if state.branches else "",
         entities=unique_entities,
-        hypotheses=state.hypotheses,
+        hypotheses=case_level_hypotheses,
     )
 
     agent = _build_flanker_agent(model=model, feature_flags=feature_flags)

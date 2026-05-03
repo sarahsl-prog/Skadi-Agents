@@ -24,18 +24,14 @@ except Exception:  # noqa: S110  # pragma: no cover
 
 # Regex recognizers for air-gapped / no-Presidio environments
 _IPV4_RE = re.compile(
-    r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
-    r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"
+    r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}" r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"
 )
-_IPV6_RE = re.compile(
-    r"\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b"
-)
+_IPV6_RE = re.compile(r"\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b")
 _MAC_RE = re.compile(r"\b(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\b")
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 _HOSTNAME_RE = re.compile(
-    r"\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+"
-    r"[a-zA-Z]{2,}\b"
+    r"\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+" r"[a-zA-Z]{2,}\b"
 )
 _CIDR_RE = re.compile(
     r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
@@ -89,15 +85,11 @@ class NERStripper:
             count = placeholder_counts[entity_type]
             token = f"<{entity_type}_{count}>"
             mapping[token] = text[res.start : res.end]
-            anon_operators[entity_type] = OperatorConfig(
-                "replace", {"new_value": token}
-            )
+            anon_operators[entity_type] = OperatorConfig("replace", {"new_value": token})
 
         if operators:
             for entity_type, new_value in operators.items():
-                anon_operators[entity_type] = OperatorConfig(
-                    "replace", {"new_value": new_value}
-                )
+                anon_operators[entity_type] = OperatorConfig("replace", {"new_value": new_value})
 
         anonymized = self._anonymizer.anonymize(
             text=text, analyzer_results=results, operators=anon_operators

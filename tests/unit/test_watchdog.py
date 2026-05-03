@@ -96,6 +96,27 @@ class TestReviewWatchdog:
         assert escalated == ["case-4"]
 
     @pytest.mark.asyncio
+    async def test_parses_naive_iso_string_timestamp(self, mock_callbacks: Any) -> None:
+        cases, escalated, get_cases, escalate = mock_callbacks
+        now = datetime.now(UTC)
+        # Naive ISO string (no timezone info) — watchdog should force UTC
+        naive_dt = now.replace(tzinfo=None) - timedelta(hours=25)
+        cases.append(
+            {
+                "case_id": "case-5",
+                "review_started_at": naive_dt.isoformat(),
+            }
+        )
+
+        wd = ReviewWatchdog(
+            get_cases_in_review=get_cases,
+            escalate_case=escalate,
+            timeout_hours=24.0,
+        )
+        await wd.check_timeouts()
+        assert escalated == ["case-5"]
+
+    @pytest.mark.asyncio
     async def test_start_stop_lifecycle(self, mock_callbacks: Any) -> None:
         _, _, get_cases, escalate = mock_callbacks
 

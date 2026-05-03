@@ -13,10 +13,10 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import httpx
 from opentelemetry import trace
 
 from wolfpack.config.settings import Settings
-from wolfpack.observability.alerts import get_builtin_alerts
 
 TRACER = trace.get_tracer("wolfpack")
 
@@ -37,17 +37,23 @@ class AlertManager:
         settings: Settings | None = None,
         cooldown_seconds: float = 300.0,
         poll_interval_seconds: float = 60.0,
-        monitors: list | None = None,
+        monitors: list[Any] | None = None,
         webhook_url: str | None = None,
     ) -> None:
         self._cooldown = timedelta(seconds=cooldown_seconds)
         self._poll_interval = poll_interval_seconds
         self._monitors = monitors or []
-        self._webhook_url = webhook_url or (
-            settings.webhook_config.url if settings and settings.webhook_config else None
-        )
+        self._webhook_url = webhook_url
+        self._timeout = 30.0
+        self._client: httpx.AsyncClient | None = None
         self._task: asyncio.Task[Any] | None = None
         self._last_fired: dict[str, datetime] = {}
+        self._consecutive_errors = 0
+
+        if settings is not None:
+            if self._webhook_url is None:
+                self._webhook_url = settings.webhook_config.url
+            self._timeout = settings.webhook_config.timeout_s
 
     @property
     def running(self) -> bool:
@@ -57,6 +63,7 @@ class AlertManager:
         """Begin the background polling loop."""
         if self.running:
             return
+        self._client = httpx.AsyncClient()
         self._task = asyncio.create_task(self._run())
 
     async def stop(self) -> None:
@@ -68,6 +75,9 @@ class AlertManager:
             except asyncio.CancelledError:
                 pass
             self._task = None
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     async def run_once(self) -> list[dict[str, Any]]:
         """Run all monitors once and return newly triggered alerts."""
@@ -84,15 +94,27 @@ class AlertManager:
         while True:
             try:
                 await self.run_once()
+                self._consecutive_errors = 0
             except Exception as exc:
-                # OTel span event for background error
+                self._consecutive_errors += 1
+                backoff = min(2 ** (self._consecutive_errors - 1), 300)
                 with TRACER.start_as_current_span("alert_manager.poll") as span:
                     span.record_exception(exc)
                     span.set_status(trace.StatusCode.ERROR, str(exc))
+                    span.set_attribute("alert_manager.consecutive_errors", self._consecutive_errors)
+                    span.set_attribute("alert_manager.backoff_s", backoff)
+                await asyncio.sleep(backoff)
+                continue
             await asyncio.sleep(self._poll_interval)
 
+    _DEDUP_EXCLUDE: frozenset[str] = frozenset(
+        {"timestamp", "fired_at", "dispatched_at", "seq", "id"}
+    )
+
     def _alert_key(self, alert: dict[str, Any]) -> str:
-        canonical = json.dumps(alert, sort_keys=True)
+        """Build a canonical hash that excludes volatile / non-identity fields."""
+        filtered = {k: v for k, v in alert.items() if k not in self._DEDUP_EXCLUDE}
+        canonical = json.dumps(filtered, sort_keys=True, default=str)
         return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
     def _should_fire(self, alert: dict[str, Any]) -> bool:
@@ -112,16 +134,16 @@ class AlertManager:
             if self._webhook_url is None:
                 span.add_event("alert_manager.dispatch_skipped", {"reason": "no_webhook_url"})
                 return
+            if self._client is None:
+                span.add_event("alert_manager.dispatch_skipped", {"reason": "not_started"})
+                return
             try:
-                import httpx
-
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        self._webhook_url,
-                        json=alert,
-                        timeout=30.0,
-                    )
-                    resp.raise_for_status()
+                resp = await self._client.post(
+                    self._webhook_url,
+                    json=alert,
+                    timeout=self._timeout,
+                )
+                resp.raise_for_status()
                 span.add_event("alert_manager.dispatch_sent", {"status_code": resp.status_code})
             except Exception as exc:
                 span.record_exception(exc)

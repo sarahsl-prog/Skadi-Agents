@@ -7,8 +7,9 @@ a payload dict when triggered (or ``None`` if not triggered).
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any, Callable
+from typing import Any
 
 
 class AlertSpec:
@@ -142,7 +143,7 @@ class ReviewTimeoutEscalationAlert:
         "review_timeout_escalation",
         "Review Timeout Escalation",
         "Analyst review timed out and was auto-escalated.",
-        "info",
+        "warning",
     )
 
     def __init__(
@@ -207,11 +208,13 @@ def get_builtin_alerts(
     branch_depth_fn: Callable[[], tuple[int, int]] | None = None,
     escalation_count_fn: Callable[[], int] | None = None,
     nats_lag_fn: Callable[[], int] | None = None,
-) -> list:
+    verify_chain_fn: Callable[[str], Any] | None = None,
+) -> list[Any]:
     """Return a list of all built-in alert instances."""
     return [
         SchemaRetrySpikeAlert(get_rate=retry_rate_fn),
         BranchDepthAlert(get_depth_fn=branch_depth_fn),
         ReviewTimeoutEscalationAlert(get_count_fn=escalation_count_fn),
         NATSConsumerLagAlert(get_lag_fn=nats_lag_fn),
+        LedgerHashMismatchAlert(verify_chain_fn=verify_chain_fn),
     ]
