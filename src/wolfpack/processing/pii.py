@@ -17,20 +17,14 @@ class PIICache:
         self._pool = pool
         self._cache: dict[str, dict[str, str]] = {}
 
-    async def pseudonymize(
-        self, case_id: str, identifier: str, identifier_type: str
-    ) -> str:
+    async def pseudonymize(self, case_id: str, identifier: str, identifier_type: str) -> str:
         key = f"{case_id}:{identifier_type}:{identifier}"
         case_cache = self._cache.setdefault(case_id, {})
         if key not in case_cache:
-            case_cache[key] = await pseudonymize(
-                self._pool, case_id, identifier, identifier_type
-            )
+            case_cache[key] = await pseudonymize(self._pool, case_id, identifier, identifier_type)
         return case_cache[key]
 
-    async def depseudonymize(
-        self, case_id: str, token: str, authorized_by: str
-    ) -> str | None:
+    async def depseudonymize(self, case_id: str, token: str, authorized_by: str) -> str | None:
         return await depseudonymize(self._pool, case_id, token, authorized_by)
 
     def clear(self, case_id: str | None = None) -> None:

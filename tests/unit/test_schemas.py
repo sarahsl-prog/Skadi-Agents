@@ -22,13 +22,16 @@ from wolfpack.schemas.seed import Seed
 
 
 class TestConfidence:
-    @pytest.mark.parametrize("value,expected", [
-        (1, Confidence.COINCIDENCE),
-        (2, Confidence.WEAK),
-        (3, Confidence.PLAUSIBLE),
-        (4, Confidence.STRONG),
-        (5, Confidence.HIGH_FIDELITY),
-    ])
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            (1, Confidence.COINCIDENCE),
+            (2, Confidence.WEAK),
+            (3, Confidence.PLAUSIBLE),
+            (4, Confidence.STRONG),
+            (5, Confidence.HIGH_FIDELITY),
+        ],
+    )
     def test_ordinal_values(self, value: int, expected: Confidence) -> None:
         assert Confidence(value) is expected
 
@@ -187,9 +190,7 @@ class TestTrackerIO:
     def test_output_structured(self) -> None:
         out = TrackerOutput(
             tracker_confidence=Confidence.STRONG,
-            hypotheses=[
-                Hypothesis(description="Suspicious RDP", confidence=Confidence.STRONG)
-            ],
+            hypotheses=[Hypothesis(description="Suspicious RDP", confidence=Confidence.STRONG)],
         )
         assert out.tracker_confidence == Confidence.STRONG
         assert len(out.hypotheses) == 1

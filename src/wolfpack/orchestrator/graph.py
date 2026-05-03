@@ -63,10 +63,7 @@ def _route_after_review(state: CaseState) -> str:
     return END
 
 
-NodeFn = (
-    Callable[[CaseState], dict[str, Any]]
-    | Callable[[CaseState], Awaitable[dict[str, Any]]]
-)
+NodeFn = Callable[[CaseState], dict[str, Any]] | Callable[[CaseState], Awaitable[dict[str, Any]]]
 
 
 def _wrap_with_nats(
@@ -91,16 +88,13 @@ def _wrap_with_nats(
                 sanitized[key] = _sanitize_payload(value)
             elif isinstance(value, list):
                 sanitized[key] = [
-                    _sanitize_payload(item) if isinstance(item, dict) else item
-                    for item in value
+                    _sanitize_payload(item) if isinstance(item, dict) else item for item in value
                 ]
             else:
                 sanitized[key] = value
         return sanitized
 
-    async def _publish_safe(
-        subject: str, payload: dict[str, Any]
-    ) -> None:
+    async def _publish_safe(subject: str, payload: dict[str, Any]) -> None:
         """Publish to NATS with timeout and error logging."""
         try:
             sanitized = _sanitize_payload(payload)
@@ -188,7 +182,14 @@ def build_hunt_graph(
         if scribe is None:
             scribe = stub_scribe
 
-    if alpha is None or tracker is None or flanker is None or closer is None or review is None or scribe is None:
+    if (
+        alpha is None
+        or tracker is None
+        or flanker is None
+        or closer is None
+        or review is None
+        or scribe is None
+    ):
         raise RuntimeError("All agent nodes (including scribe) must be provided or use_stubs=True")
 
     # Wrap every node with OTel tracing before (optionally) wiring NATS.

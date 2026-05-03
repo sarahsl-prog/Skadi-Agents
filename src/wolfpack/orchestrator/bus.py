@@ -20,7 +20,11 @@ from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig
 
 from wolfpack.config.settings import NATSConfig
-from wolfpack.observability.nats_propagation import context, extract_nats_headers, inject_nats_headers
+from wolfpack.observability.nats_propagation import (
+    context,
+    extract_nats_headers,
+    inject_nats_headers,
+)
 
 
 class NATSClient:
@@ -100,9 +104,7 @@ class NATSClient:
         merged_headers = dict(headers) if headers else {}
         merged_headers.update(inject_nats_headers())
 
-        return await self._js.publish(
-            subject, payload, headers=merged_headers
-        )
+        return await self._js.publish(subject, payload, headers=merged_headers)
 
     async def subscribe(
         self,

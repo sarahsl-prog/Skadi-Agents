@@ -22,9 +22,7 @@ def configure_logfire(settings: Settings) -> None:
     """
     provider = trace.get_tracer_provider()
     if not hasattr(provider, "resource"):
-        raise RuntimeError(
-            "bootstrap_tracing() must be called before configure_logfire()"
-        )
+        raise RuntimeError("bootstrap_tracing() must be called before configure_logfire()")
     logfire.configure(
         service_name=settings.otel.service_name,
         send_to_logfire=False,  # we export through our own OTel collector

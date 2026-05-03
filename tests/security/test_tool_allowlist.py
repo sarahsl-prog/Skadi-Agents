@@ -62,9 +62,7 @@ class TestToolAllowlist:
         def _guard(tool_name: str, allowlist: frozenset[str]) -> bool:
             if tool_name not in allowlist:
                 # In production this would also write to the evidence ledger
-                raise PermissionError(
-                    f"Tool '{tool_name}' is not in the agent allowlist"
-                )
+                raise PermissionError(f"Tool '{tool_name}' is not in the agent allowlist")
             return True
 
         assert _guard("threat_intel_tool", TRACKER_TOOL_ALLOWLIST) is True

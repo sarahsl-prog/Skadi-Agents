@@ -108,9 +108,11 @@ class CloudTrailSource(TelemetrySource):
             source=self.name,
             raw_payload=record,
             entities=[
-                Entity(type="user", value=user_arn)
-                if user_arn
-                else Entity(type="ip", value=source_ip),
+                (
+                    Entity(type="user", value=user_arn)
+                    if user_arn
+                    else Entity(type="ip", value=source_ip)
+                ),
             ],
             metadata={
                 "event_name": event_name,

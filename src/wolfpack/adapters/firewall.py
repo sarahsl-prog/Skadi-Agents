@@ -26,9 +26,7 @@ class FirewallAdapter(TelemetrySource):
     )
 
     # Palo Alto: ... src=10.0.0.1 dst=10.0.0.2 ...
-    _PALOALTO_RE = re.compile(
-        r"src=(?P<src>\S+)\s+dst=(?P<dst>\S+)"
-    )
+    _PALOALTO_RE = re.compile(r"src=(?P<src>\S+)\s+dst=(?P<dst>\S+)")
 
     def __init__(self, log_path: str | None = None) -> None:
         self._log_path = log_path

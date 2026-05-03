@@ -31,7 +31,6 @@ from wolfpack.observability.tracing import bootstrap_tracing, traced_node
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.seed import Seed
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures
 # --------------------------------------------------------------------------- #

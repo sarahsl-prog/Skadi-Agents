@@ -144,23 +144,19 @@ class PGVectorStore:
         """Create the table and vector index if they do not exist."""
         async with self._pool.acquire() as conn:
             await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
-            await conn.execute(
-                f"""
+            await conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self._table} (
                     id TEXT PRIMARY KEY,
                     content TEXT NOT NULL,
                     metadata JSONB DEFAULT '{{}}',
                     embedding VECTOR({self._vector_dim})
                 )
-                """
-            )
-            await conn.execute(
-                f"""
+                """)
+            await conn.execute(f"""
                 CREATE INDEX IF NOT EXISTS {self._table}_embedding_idx
                 ON {self._table}
                 USING ivfflat (embedding vector_cosine_ops)
-                """
-            )
+                """)
 
     @staticmethod
     def _format_vector(vec: list[float]) -> str:
@@ -183,8 +179,7 @@ class PGVectorStore:
                     raise ValueError(
                         f"Embedding dimension mismatch: expected {self._vector_dim}, got {len(emb)}"
                     )
-                _sql = (
-                    f"""
+                _sql = f"""
                     INSERT INTO {self._table} (id, content, metadata, embedding)
                     VALUES ($1, $2, $3, $4::vector)
                     ON CONFLICT (id) DO UPDATE SET
@@ -192,7 +187,6 @@ class PGVectorStore:
                         metadata = EXCLUDED.metadata,
                         embedding = EXCLUDED.embedding
                     """  # noqa: S608
-                )
                 await conn.execute(
                     _sql,
                     doc.id,
@@ -221,8 +215,7 @@ class PGVectorStore:
             where_clause = "WHERE " + " AND ".join(conditions)
 
         async with self._pool.acquire() as conn:
-            _sql = (
-                f"""
+            _sql = f"""
                 SELECT id, content, metadata,
                        1 - (embedding <=> $1::vector) AS score
                 FROM {self._table}
@@ -230,7 +223,6 @@ class PGVectorStore:
                 ORDER BY embedding <=> $1::vector
                 LIMIT $2
                 """  # noqa: S608
-            )
             rows = await conn.fetch(_sql, *params)
         return [
             RAGDocument(
@@ -258,9 +250,7 @@ class PGVectorStore:
         embeddings = await self._embedder.embed([query])
         if not embeddings:
             return []
-        return await self.query_by_embedding(
-            embeddings[0], top_k=top_k, filters=filters
-        )
+        return await self.query_by_embedding(embeddings[0], top_k=top_k, filters=filters)
 
     async def keyword_search(
         self,
@@ -282,8 +272,7 @@ class PGVectorStore:
             where_clause = "WHERE " + " AND ".join(conditions)
 
         async with self._pool.acquire() as conn:
-            _sql = (
-                f"""
+            _sql = f"""
                 SELECT id, content, metadata,
                        ts_rank(
                            to_tsvector('english', content),
@@ -294,7 +283,6 @@ class PGVectorStore:
                 ORDER BY score DESC
                 LIMIT $2
                 """  # noqa: S608
-            )
             rows = await conn.fetch(_sql, *params)
         return [
             RAGDocument(

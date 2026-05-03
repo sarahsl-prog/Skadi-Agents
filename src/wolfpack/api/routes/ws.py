@@ -28,9 +28,7 @@ async def case_websocket(websocket: WebSocket, case_id: str) -> None:
 
     # Simple auth handshake with timeout
     try:
-        auth_msg_raw = await asyncio.wait_for(
-            websocket.receive_text(), timeout=5.0
-        )
+        auth_msg_raw = await asyncio.wait_for(websocket.receive_text(), timeout=5.0)
         auth_msg: dict[str, Any] = json.loads(auth_msg_raw)
         if auth_msg.get("type") != "auth":
             await websocket.close(code=1008, reason="Auth required")

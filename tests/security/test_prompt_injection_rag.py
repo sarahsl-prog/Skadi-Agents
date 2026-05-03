@@ -18,6 +18,7 @@ from wolfpack.schemas.verdict import VerdictPacket
 # Sanitization / stripping helpers (placeholder until real layer lands)
 # ------------------------------------------------------------------ #
 
+
 def _strip_injection_patterns(text: str) -> str:
     """Remove common prompt-injection carriers from text.
 

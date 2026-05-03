@@ -182,9 +182,7 @@ class TestBreakGlassAudit:
         assert count == 5
 
     @pytest.mark.asyncio
-    async def test_audit_records_have_required_fields(
-        self, audit_pool: PersistencePool
-    ) -> None:
+    async def test_audit_records_have_required_fields(self, audit_pool: PersistencePool) -> None:
         case_id = "550e8400-e29b-41d4-a716-446655440004"
         await _create_case(audit_pool, case_id)
         await create_pii_salt(audit_pool, case_id)

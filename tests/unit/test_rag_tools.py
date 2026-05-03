@@ -38,7 +38,7 @@ class TestSanitisation:
         assert "World" in clean
 
     def test_strip_javascript(self) -> None:
-        raw = 'Click <script>steal()</script> here or javascript:void(0)'
+        raw = "Click <script>steal()</script> here or javascript:void(0)"
         clean = _strip_javascript(raw)
         assert "<script>" not in clean
         assert "steal()" not in clean

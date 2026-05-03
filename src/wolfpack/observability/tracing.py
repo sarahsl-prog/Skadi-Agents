@@ -76,10 +76,7 @@ def bootstrap_tracing(settings: Settings) -> TracerProvider:
 # LangGraph node instrumentation
 # --------------------------------------------------------------------------- #
 
-NodeFn = (
-    Callable[[Any], dict[str, Any]]
-    | Callable[[Any], Awaitable[dict[str, Any]]]
-)
+NodeFn = Callable[[Any], dict[str, Any]] | Callable[[Any], Awaitable[dict[str, Any]]]
 
 
 def traced_node(

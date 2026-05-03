@@ -129,9 +129,7 @@ class LearningQueueWorker:
 
         verdict = VerdictPacket(
             decision=(
-                case_state.verdict_decision
-                if case_state.verdict_decision
-                else "INCONCLUSIVE"
+                case_state.verdict_decision if case_state.verdict_decision else "INCONCLUSIVE"
             ),
             confidence=(
                 case_state.overall_confidence
@@ -188,9 +186,7 @@ class LearningQueueWorker:
                 reason,
             )
 
-    async def _handle_failure(
-        self, entry_id: str, exc: Exception
-    ) -> None:
+    async def _handle_failure(self, entry_id: str, exc: Exception) -> None:
         """Increment retry count for the entry."""
         async with self._pool.acquire() as conn:
             await conn.execute(
@@ -228,6 +224,7 @@ class LearningQueueWorker:
             seed_data = case_row["seed"]
             if isinstance(seed_data, str):
                 import json
+
                 seed_data = json.loads(seed_data)
 
             case = CaseState(
@@ -253,14 +250,13 @@ class LearningQueueWorker:
                 if isinstance(hyp_data, str):
                     hyp_data = json.loads(hyp_data)
                 from wolfpack.schemas.branch import BranchSpec
+
                 spec = BranchSpec.model_validate(hyp_data)
                 branch = BranchState(
                     branch_id=str(row["id"]),
                     case_id=str(row["case_id"]),
                     parent_branch_id=(
-                        str(row["parent_branch_id"])
-                        if row["parent_branch_id"]
-                        else None
+                        str(row["parent_branch_id"]) if row["parent_branch_id"] else None
                     ),
                     spec=spec,
                     status=row["status"],
@@ -311,4 +307,3 @@ class LearningQueueWorker:
             golden_sets_dir=golden_sets_dir,
         )
         return await replay.run_all()
-

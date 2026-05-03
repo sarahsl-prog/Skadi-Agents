@@ -104,13 +104,12 @@ def _build_tools(
     # ------------------------------------------------------------------ #
     rag = deps.rag if deps else None
     if rag is not None:
+
         async def _threat_intel(query: str, top_k: int = 5) -> Any:
             pipeline = rag.threat_intel
             if pipeline is None:
                 return RAGResult(source="threat_intel", answer="")
-            docs = await traced_retrieve("threat_intel", pipeline.retrieve)(
-                query, top_k=top_k
-            )
+            docs = await traced_retrieve("threat_intel", pipeline.retrieve)(query, top_k=top_k)
             return RAGResult(
                 source="threat_intel",
                 documents=docs,
@@ -125,9 +124,7 @@ def _build_tools(
             pipeline = rag.case_history
             if pipeline is None:
                 return RAGResult(source="case_history", answer="")
-            docs = await traced_retrieve("case_history", pipeline.retrieve)(
-                query, top_k=top_k
-            )
+            docs = await traced_retrieve("case_history", pipeline.retrieve)(query, top_k=top_k)
             return RAGResult(
                 source="case_history",
                 documents=docs,
@@ -192,9 +189,7 @@ def _build_closer_agent(
         from wolfpack.config.settings import LLMConfig
 
         if cfg is None:
-            cfg = LLMConfig(
-                provider="ollama", model="llama3.2", base_url="http://localhost:11434"
-            )
+            cfg = LLMConfig(provider="ollama", model="llama3.2", base_url="http://localhost:11434")
         model = get_model(cfg)
 
     tools = _build_tools(deps=deps, feature_flags=feature_flags)

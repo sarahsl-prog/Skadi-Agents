@@ -40,9 +40,7 @@ class TestReviewTimeoutIntegration:
         return graph.compile(checkpointer=MemorySaver())
 
     @pytest.mark.asyncio
-    async def test_case_interrupted_then_escalated_by_watchdog(
-        self, review_graph: Any
-    ) -> None:
+    async def test_case_interrupted_then_escalated_by_watchdog(self, review_graph: Any) -> None:
         case_id = "timeout-case-1"
         state = CaseState(case_id=case_id, seed=Seed(type="ioc", raw_payload={}))
         config = {"configurable": {"thread_id": case_id}}
@@ -76,9 +74,7 @@ class TestReviewTimeoutIntegration:
         assert escalated == [case_id]
 
     @pytest.mark.asyncio
-    async def test_case_approved_before_timeout_no_escalation(
-        self, review_graph: Any
-    ) -> None:
+    async def test_case_approved_before_timeout_no_escalation(self, review_graph: Any) -> None:
         case_id = "approve-case-1"
         state = CaseState(case_id=case_id, seed=Seed(type="ioc", raw_payload={}))
         config = {"configurable": {"thread_id": case_id}}

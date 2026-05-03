@@ -96,5 +96,3 @@ class AlphaDispatcher:
         """Synchronous wrapper around :meth:`dispatch` for LangGraph wiring."""
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(self.dispatch(seed, pool=pool))
-
-

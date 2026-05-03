@@ -18,6 +18,4 @@ class AlphaOutput(BaseModel):
         default="tracker",
         description="Agent that should receive the next task.",
     )
-    task_description: str = Field(
-        default="", description="Human-readable task for the next agent."
-    )
+    task_description: str = Field(default="", description="Human-readable task for the next agent.")

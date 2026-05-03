@@ -134,9 +134,7 @@ class TestRunFlanker:
         mock_result = MagicMock()
         mock_result.output = mock_output
 
-        with patch.object(
-            Agent, "run", new_callable=AsyncMock, return_value=mock_result
-        ):
+        with patch.object(Agent, "run", new_callable=AsyncMock, return_value=mock_result):
             deps = FlankerDeps()
             result = await run_flanker(case_state, deps=deps)
 
@@ -155,9 +153,7 @@ class TestRunFlanker:
         mock_result = MagicMock()
         mock_result.output = mock_output
 
-        with patch.object(
-            Agent, "run", new_callable=AsyncMock, return_value=mock_result
-        ):
+        with patch.object(Agent, "run", new_callable=AsyncMock, return_value=mock_result):
             deps = FlankerDeps()
             result = await run_flanker(case_state, deps=deps)
 

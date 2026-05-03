@@ -18,12 +18,8 @@ class Hypothesis(BaseModel):
     evidence references so that the Closer can assemble a verdict.
     """
 
-    description: str = Field(
-        ..., description="Human-readable statement of the hypothesis."
-    )
-    confidence: Confidence = Field(
-        ..., description="Agent-assessed confidence (1-5)."
-    )
+    description: str = Field(..., description="Human-readable statement of the hypothesis.")
+    confidence: Confidence = Field(..., description="Agent-assessed confidence (1-5).")
     evidence_refs: list[EvidenceRef] = Field(
         default_factory=list, description="Pointers to supporting evidence."
     )

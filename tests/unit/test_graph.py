@@ -72,7 +72,7 @@ class TestStubHappyPath:
         assert result["review_decision"] == "approved"
 
     def test_tracker_routes_to_closer_when_confidence_high(self) -> None:
-        """ tracker_confidence == PLAUSIBLE (3) should skip flanker. """
+        """tracker_confidence == PLAUSIBLE (3) should skip flanker."""
         seed = Seed(type="alert", raw_payload={})
         state = CaseState(
             case_id=str(uuid.uuid4()),
@@ -84,7 +84,7 @@ class TestStubHappyPath:
         assert result["status"] == "closed"
 
     def test_tracker_routes_to_flanker_when_confidence_low(self) -> None:
-        """ tracker_confidence < PLAUSIBLE should hit flanker. """
+        """tracker_confidence < PLAUSIBLE should hit flanker."""
         seed = Seed(type="alert", raw_payload={})
         state = CaseState(
             case_id=str(uuid.uuid4()),

@@ -25,9 +25,7 @@ class EntitySummary(BaseModel):
     """Pseudonymised entity entry suitable for institutional memory."""
 
     type: str = Field(..., description="Entity telemetry category.")
-    pseudonym: str = Field(
-        ..., description="Deterministic pseudonym derived from the raw value."
-    )
+    pseudonym: str = Field(..., description="Deterministic pseudonym derived from the raw value.")
 
     @classmethod
     def from_entity(cls, entity: Entity, salt: str | None = None) -> EntitySummary:
@@ -46,9 +44,7 @@ class CaseSummary(BaseModel):
 
     case_id: str = Field(..., description="Stable case identifier.")
     seed_type: str = Field(..., description="Type of seed that started the case.")
-    seed_summary: str = Field(
-        ..., description="Human-readable summary of the original seed."
-    )
+    seed_summary: str = Field(..., description="Human-readable summary of the original seed.")
     verdict: str = Field(
         ..., description="Final verdict decision (MALICIOUS/BENIGN/INCONCLUSIVE/NEEDS_MORE_INFO)."
     )
@@ -60,9 +56,7 @@ class CaseSummary(BaseModel):
         default_factory=list, description="Key pseudonymised entities."
     )
     branches: int = Field(..., description="Number of branches investigated.")
-    duration_hours: float = Field(
-        ..., description="Elapsed hours from case creation to closure."
-    )
+    duration_hours: float = Field(..., description="Elapsed hours from case creation to closure.")
     narrative: str = Field(
         ...,
         description="Human-readable case narrative (primary target for semantic retrieval).",
@@ -132,9 +126,7 @@ def format_case_summary(
 
     # Verdict / confidence resolution
     verdict_decision: str = verdict.decision if verdict else "INCONCLUSIVE"
-    verdict_confidence: Confidence = (
-        verdict.confidence if verdict else Confidence.COINCIDENCE
-    )
+    verdict_confidence: Confidence = verdict.confidence if verdict else Confidence.COINCIDENCE
     if case_state.overall_confidence is not None:
         verdict_confidence = case_state.overall_confidence
     if case_state.verdict_decision is not None:
@@ -167,9 +159,7 @@ def format_case_summary(
     # Duration
     created = case_state.created_at
     closed = case_state.updated_at or now
-    duration_hours = max(
-        0.0, (closed - created).total_seconds() / 3600.0
-    )
+    duration_hours = max(0.0, (closed - created).total_seconds() / 3600.0)
 
     # Narrative
     narrative_parts: list[str] = [

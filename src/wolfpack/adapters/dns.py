@@ -113,7 +113,11 @@ class DNSSource(TelemetrySource):
             source=self.name,
             raw_payload={"line": line, **gd},
             entities=[
-                Entity(type="domain", value=domain) if domain else Entity(type="ip", value=client_ip),
+                (
+                    Entity(type="domain", value=domain)
+                    if domain
+                    else Entity(type="ip", value=client_ip)
+                ),
             ],
             metadata={
                 "query_type": qtype,
@@ -136,19 +140,10 @@ class DNSSource(TelemetrySource):
 
         # Accept multiple key conventions
         domain = (
-            data.get("q")
-            or data.get("query")
-            or data.get("query_name")
-            or data.get("domain", "")
+            data.get("q") or data.get("query") or data.get("query_name") or data.get("domain", "")
         )
-        src_ip = (
-            data.get("src")
-            or data.get("client_ip")
-            or data.get("src_ip", "")
-        )
-        qtype = (
-            data.get("t") or data.get("qtype") or data.get("type", "")
-        )
+        src_ip = data.get("src") or data.get("client_ip") or data.get("src_ip", "")
+        qtype = data.get("t") or data.get("qtype") or data.get("type", "")
         rcode = data.get("rcode")
         answers = data.get("answers", [])
 
@@ -170,7 +165,15 @@ class DNSSource(TelemetrySource):
             source=self.name,
             raw_payload=data,
             entities=[
-                Entity(type="domain", value=domain) if domain else Entity(type="ip", value=src_ip) if src_ip else Entity(type="domain", value="unknown"),
+                (
+                    Entity(type="domain", value=domain)
+                    if domain
+                    else (
+                        Entity(type="ip", value=src_ip)
+                        if src_ip
+                        else Entity(type="domain", value="unknown")
+                    )
+                ),
             ],
             metadata={
                 "query_type": qtype,

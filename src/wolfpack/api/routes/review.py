@@ -69,13 +69,9 @@ async def _write_ledger_and_update(
 
 async def _assert_case_in_review(conn: Any, case_id: str) -> None:
     """Raise 409 if the case is not in 'review' status."""
-    row = await conn.fetchrow(
-        "SELECT status FROM wolfpack.cases WHERE id = $1", case_id
-    )
+    row = await conn.fetchrow("SELECT status FROM wolfpack.cases WHERE id = $1", case_id)
     if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Case not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
     if row["status"] != "review":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

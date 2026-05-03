@@ -51,7 +51,9 @@ def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
         top_k: int = 20,
     ) -> list[Event]:
         if entity_type not in _ENTITY_TYPES:
-            raise ValueError(f"Invalid entity_type: {entity_type!r}. Must be one of: {sorted(_ENTITY_TYPES)}")
+            raise ValueError(
+                f"Invalid entity_type: {entity_type!r}. Must be one of: {sorted(_ENTITY_TYPES)}"
+            )
         if not entity_value:
             raise ValueError("entity_value must be non-empty")
         entity = Entity(type=entity_type, value=entity_value)
@@ -63,23 +65,18 @@ def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
 
         # Apply PII sanitization when a pipeline is provided
         if ctx.deps.pii_pipeline is not None and ctx.deps.case_id is not None:
-            events = await ctx.deps.pii_pipeline.sanitize_events(
-                events, ctx.deps.case_id
-            )
+            events = await ctx.deps.pii_pipeline.sanitize_events(events, ctx.deps.case_id)
 
         return events
 
     _tool.__name__ = f"{adapter.name}_query"
     _tool.__doc__ = (
-        f"Query the {adapter.name} telemetry source for events "
-        f"related to the given entity."
+        f"Query the {adapter.name} telemetry source for events " f"related to the given entity."
     )
     return _tool
 
 
-_TIER_1_ADAPTERS = frozenset(
-    {"syslog", "windows_eventlog", "crowdstrike", "okta", "firewall"}
-)
+_TIER_1_ADAPTERS = frozenset({"syslog", "windows_eventlog", "crowdstrike", "okta", "firewall"})
 
 
 def build_adapter_tools(

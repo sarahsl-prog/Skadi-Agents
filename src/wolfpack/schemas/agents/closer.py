@@ -31,13 +31,14 @@ class CloserOutput(BaseModel):
     next-best action, and evidence references.
     """
 
-    decision: Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] = Field(
-        ..., description="Verdict: MALICIOUS, BENIGN, INCONCLUSIVE, NEEDS_MORE_INFO, or SUSPICIOUS."
+    decision: Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] = (
+        Field(
+            ...,
+            description="Verdict: MALICIOUS, BENIGN, INCONCLUSIVE, NEEDS_MORE_INFO, or SUSPICIOUS.",
+        )
     )
     confidence: Confidence = Field(..., description="Closer's confidence in the verdict.")
-    next_best_action: str = Field(
-        default="", description="Recommended next step for the analyst."
-    )
+    next_best_action: str = Field(default="", description="Recommended next step for the analyst.")
     evidence_refs: list[EvidenceRef] = Field(
         default_factory=list, description="Evidence supporting the verdict."
     )

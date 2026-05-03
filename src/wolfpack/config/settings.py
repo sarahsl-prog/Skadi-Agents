@@ -32,9 +32,7 @@ class LLMConfig(BaseModel):
     def _validate_url_scheme(cls, v: str) -> str:
         parsed = urlparse(v)
         if parsed.scheme not in _ALLOWED_SCHEMES:
-            raise ValueError(
-                f"base_url must use http or https scheme, got: {parsed.scheme!r}"
-            )
+            raise ValueError(f"base_url must use http or https scheme, got: {parsed.scheme!r}")
         if not parsed.netloc:
             raise ValueError("base_url must have a host component")
         return v
@@ -98,7 +96,9 @@ class MLflowConfig(BaseModel):
     def _validate_url_scheme(cls, v: str) -> str:
         parsed = urlparse(v)
         if parsed.scheme not in _ALLOWED_SCHEMES:
-            raise ValueError(f"MLflow tracking_uri must use http or https scheme, got: {parsed.scheme!r}")
+            raise ValueError(
+                f"MLflow tracking_uri must use http or https scheme, got: {parsed.scheme!r}"
+            )
         if not parsed.netloc:
             raise ValueError("MLflow tracking_uri must have a host component")
         return v

@@ -114,9 +114,7 @@ class AlertManager:
 
     def _alert_key(self, alert: dict[str, Any]) -> str:
         """Build a canonical hash that excludes volatile / non-identity fields."""
-        filtered = {
-            k: v for k, v in alert.items() if k not in self._DEDUP_EXCLUDE
-        }
+        filtered = {k: v for k, v in alert.items() if k not in self._DEDUP_EXCLUDE}
         canonical = json.dumps(filtered, sort_keys=True, default=str)
         return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 

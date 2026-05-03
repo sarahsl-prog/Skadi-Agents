@@ -41,13 +41,10 @@ class TrackerInput(BaseModel):
         ),
         description="Look-back window for telemetry queries.",
     )
-    seed_description: str = Field(
-        default="", description="Free-text seed from the analyst."
-    )
+    seed_description: str = Field(default="", description="Free-text seed from the analyst.")
 
 
 from wolfpack.schemas.agents.tracker import TrackerOutput
-
 
 # ------------------------------------------------------------------ #
 # Dependencies
@@ -128,9 +125,7 @@ def _build_tracker_agent(
         from wolfpack.config.settings import LLMConfig
 
         if cfg is None:
-            cfg = LLMConfig(
-                provider="ollama", model="llama3.2", base_url="http://localhost:11434"
-            )
+            cfg = LLMConfig(provider="ollama", model="llama3.2", base_url="http://localhost:11434")
         model = get_model(cfg)
 
     tools: list[Any] = []
@@ -215,9 +210,7 @@ async def run_tracker(
     entities = seed.raw_payload.get("entities", []) if isinstance(seed.raw_payload, dict) else []
     if not entities and state.branches:
         # Fallback: use entities from the root branch
-        entities = [
-            e.model_dump() for b in state.branches for e in b.entities
-        ]
+        entities = [e.model_dump() for b in state.branches for e in b.entities]
 
     time_window = TimeWindow(
         start=datetime.now(UTC) - timedelta(hours=24),

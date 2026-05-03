@@ -14,12 +14,8 @@ class EvidenceRef(BaseModel):
     telemetry blobs live in object storage or adapter caches.
     """
 
-    source_type: str = Field(
-        ..., description="Adapter or system that produced the evidence."
-    )
-    source_id: str = Field(
-        ..., description="Unique identifier within the source system."
-    )
+    source_type: str = Field(..., description="Adapter or system that produced the evidence.")
+    source_id: str = Field(..., description="Unique identifier within the source system.")
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="UTC time the evidence was captured or received.",

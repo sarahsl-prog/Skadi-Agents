@@ -40,9 +40,7 @@ async def test_closer_produces_verdict_packet() -> None:
             type="ioc",
             raw_payload={"entities": [{"type": "ip", "value": "192.0.2.1"}]},
         ),
-        hypotheses=[
-            Hypothesis(description="Test hypothesis", confidence=Confidence.PLAUSIBLE)
-        ],
+        hypotheses=[Hypothesis(description="Test hypothesis", confidence=Confidence.PLAUSIBLE)],
         evidence_refs=[EvidenceRef(source_type="stub", source_id="ev-001")],
     )
 

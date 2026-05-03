@@ -71,7 +71,9 @@ class PolicyEngine:
             missing = required - policy.keys()
             raise ValueError(f"Policy missing required keys: {missing}")
         if not callable(policy["check"]):
-            raise TypeError(f"Policy 'check' must be callable, got {type(policy['check']).__name__}")
+            raise TypeError(
+                f"Policy 'check' must be callable, got {type(policy['check']).__name__}"
+            )
         self._policies.append(policy)
 
     async def evaluate(

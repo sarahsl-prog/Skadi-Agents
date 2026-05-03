@@ -40,10 +40,7 @@ class TestSyslogAdapter:
                 f"{month_abbr} {day} {t} web01 sshd[1234]: "
                 f"Accepted publickey for alice from 10.0.0.1\n"
             )
-            f.write(
-                f"{month_abbr} {day} {t} web01 kernel: "
-                f"Critical temperature reached\n"
-            )
+            f.write(f"{month_abbr} {day} {t} web01 kernel: " f"Critical temperature reached\n")
             f.flush()
             return f.name
 
@@ -327,7 +324,9 @@ class TestZeekSuricataAdapter:
         assert events[0].metadata["log_type"] == "dns"
 
     @pytest.mark.asyncio
-    async def test_query_suricata_alert(self, suricata_log_file: str, time_window: TimeWindow) -> None:
+    async def test_query_suricata_alert(
+        self, suricata_log_file: str, time_window: TimeWindow
+    ) -> None:
         adapter = ZeekSuricataSource(log_path=suricata_log_file)
         entity = Entity(type="ip", value="192.0.2.1")
         events = await adapter.query(entity, time_window)
@@ -381,7 +380,9 @@ class TestProxyAdapter:
         assert events[0].metadata["method"] == "GET"
 
     @pytest.mark.asyncio
-    async def test_query_cloudflare_by_domain(self, cloudflare_log_file: str, time_window: TimeWindow) -> None:
+    async def test_query_cloudflare_by_domain(
+        self, cloudflare_log_file: str, time_window: TimeWindow
+    ) -> None:
         adapter = ProxySource(log_path=cloudflare_log_file)
         entity = Entity(type="domain", value="evil.com")
         events = await adapter.query(entity, time_window)
@@ -408,19 +409,23 @@ class TestCloudTrailAdapter:
     @pytest.fixture()
     def cloudtrail_log_file(self) -> str:
         ts = (datetime.now(UTC) - timedelta(hours=12)).isoformat().replace("+00:00", "Z")
-        ts2 = (datetime.now(UTC) - timedelta(hours=11, minutes=55)).isoformat().replace("+00:00", "Z")
+        ts2 = (
+            (datetime.now(UTC) - timedelta(hours=11, minutes=55)).isoformat().replace("+00:00", "Z")
+        )
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write(
                 '{"Records":['
                 f'{{"eventTime":"{ts}","eventName":"PutBucketPolicy","eventSource":"s3.amazonaws.com","sourceIPAddress":"192.0.2.1","userIdentity":{{"arn":"arn:aws:iam::123456789012:user/alice"}},"requestParameters":{{"bucketName":"sensitive-bucket"}},"awsRegion":"us-east-1"}},'
                 f'{{"eventTime":"{ts2}","eventName":"GetObject","eventSource":"s3.amazonaws.com","sourceIPAddress":"192.0.2.2","userIdentity":{{"arn":"arn:aws:iam::123456789012:user/bob"}},"requestParameters":{{"bucketName":"public-bucket"}},"awsRegion":"us-east-1"}}'
-                ']}'
+                "]}"
             )
             f.flush()
             return f.name
 
     @pytest.mark.asyncio
-    async def test_query_by_user_arn(self, cloudtrail_log_file: str, time_window: TimeWindow) -> None:
+    async def test_query_by_user_arn(
+        self, cloudtrail_log_file: str, time_window: TimeWindow
+    ) -> None:
         adapter = CloudTrailSource(log_path=cloudtrail_log_file)
         entity = Entity(type="user", value="arn:aws:iam::123456789012:user/alice")
         events = await adapter.query(entity, time_window)
@@ -429,7 +434,9 @@ class TestCloudTrailAdapter:
         assert events[0].severity == "high"
 
     @pytest.mark.asyncio
-    async def test_query_by_source_ip(self, cloudtrail_log_file: str, time_window: TimeWindow) -> None:
+    async def test_query_by_source_ip(
+        self, cloudtrail_log_file: str, time_window: TimeWindow
+    ) -> None:
         adapter = CloudTrailSource(log_path=cloudtrail_log_file)
         entity = Entity(type="ip", value="192.0.2.1")
         events = await adapter.query(entity, time_window)
@@ -437,14 +444,18 @@ class TestCloudTrailAdapter:
         assert events[0].metadata["resource"] == "sensitive-bucket"
 
     @pytest.mark.asyncio
-    async def test_query_by_bucket_name(self, cloudtrail_log_file: str, time_window: TimeWindow) -> None:
+    async def test_query_by_bucket_name(
+        self, cloudtrail_log_file: str, time_window: TimeWindow
+    ) -> None:
         adapter = CloudTrailSource(log_path=cloudtrail_log_file)
         entity = Entity(type="domain", value="sensitive-bucket")
         events = await adapter.query(entity, time_window)
         assert len(events) == 1
 
     @pytest.mark.asyncio
-    async def test_event_name_filter(self, cloudtrail_log_file: str, time_window: TimeWindow) -> None:
+    async def test_event_name_filter(
+        self, cloudtrail_log_file: str, time_window: TimeWindow
+    ) -> None:
         adapter = CloudTrailSource(log_path=cloudtrail_log_file)
         entity = Entity(type="user", value="arn:aws:iam::123456789012:user/alice")
         events = await adapter.query(entity, time_window, filters={"event_name": "GetObject"})

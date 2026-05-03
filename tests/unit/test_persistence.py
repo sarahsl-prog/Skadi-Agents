@@ -41,9 +41,7 @@ class TestPersistencePool:
 
 
 class TestCasePersistence:
-    async def test_create_case(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_create_case(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
 
@@ -56,9 +54,7 @@ class TestCasePersistence:
         mock_conn.execute.assert_awaited_once()
         mock_pool.release.assert_called_once_with(mock_conn)
 
-    async def test_get_case_found(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_get_case_found(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
         case_id = str(uuid.uuid4())
@@ -76,9 +72,7 @@ class TestCasePersistence:
         assert result.case_id == case_id
         assert result.status == "new"
 
-    async def test_get_case_not_found(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_get_case_not_found(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
         mock_conn.fetchrow.return_value = None
@@ -86,9 +80,7 @@ class TestCasePersistence:
         result = await persistence.get_case(str(uuid.uuid4()))
         assert result is None
 
-    async def test_update_case_success(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_update_case_success(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
         mock_conn.fetchrow.return_value = {"version": 2}
@@ -96,9 +88,7 @@ class TestCasePersistence:
         new_version = await persistence.update_case("case-1", "scented", expected_version=1)
         assert new_version == 2
 
-    async def test_update_case_conflict(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_update_case_conflict(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
         mock_conn.fetchrow.return_value = None
@@ -106,9 +96,7 @@ class TestCasePersistence:
         with pytest.raises(VersionConflictError):
             await persistence.update_case("case-1", "scented", expected_version=1)
 
-    async def test_create_branch(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_create_branch(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
 
@@ -134,9 +122,7 @@ class TestCasePersistence:
         new_version = await persistence.update_branch("branch-1", "closed", expected_version=2)
         assert new_version == 3
 
-    async def test_create_hypothesis(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_create_hypothesis(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
 
@@ -146,9 +132,7 @@ class TestCasePersistence:
         assert hypothesis_id
         mock_conn.execute.assert_awaited_once()
 
-    async def test_list_hypotheses(
-        self, persistence: CasePersistence, mock_pool: Any
-    ) -> None:
+    async def test_list_hypotheses(self, persistence: CasePersistence, mock_pool: Any) -> None:
         mock_conn = AsyncMock()
         mock_pool.acquire.return_value = mock_conn
         mock_conn.fetch.return_value = [

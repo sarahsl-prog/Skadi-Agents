@@ -56,7 +56,9 @@ class BranchBudget:
         """
         async with self._lock:
             state = self._ensure(case_id)
-            current_count = branches_so_far if branches_so_far is not None else state["branch_count"]
+            current_count = (
+                branches_so_far if branches_so_far is not None else state["branch_count"]
+            )
 
             if branch_depth > self._config.max_depth:
                 return False
@@ -72,7 +74,9 @@ class BranchBudget:
         """Return the remaining budget for *case_id*."""
         async with self._lock:
             state = self._ensure(case_id)
-            current_count = branches_so_far if branches_so_far is not None else state["branch_count"]
+            current_count = (
+                branches_so_far if branches_so_far is not None else state["branch_count"]
+            )
 
             return BudgetRemaining(
                 branches_remaining=max(0, self._config.max_branches_per_case - current_count),

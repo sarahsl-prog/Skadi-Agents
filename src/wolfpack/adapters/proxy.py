@@ -193,9 +193,11 @@ class ProxySource(TelemetrySource):
             raw_payload=data,
             entities=[
                 Entity(type="ip", value=client_ip),
-                Entity(type="domain", value=domain)
-                if domain
-                else Entity(type="url", value=full_url),
+                (
+                    Entity(type="domain", value=domain)
+                    if domain
+                    else Entity(type="url", value=full_url)
+                ),
             ],
             metadata={
                 "status_code": status,

@@ -43,12 +43,7 @@ class SoftwareKMS(KMSInterface):
         ciphertext = aesgcm.encrypt(nonce, dek, aad)
         kek_id_bytes = kek_id.encode("utf-8")
         # Format: kek_id_len (2 bytes) | kek_id | nonce | ciphertext
-        return (
-            struct.pack("!H", len(kek_id_bytes))
-            + kek_id_bytes
-            + nonce
-            + ciphertext
-        )
+        return struct.pack("!H", len(kek_id_bytes)) + kek_id_bytes + nonce + ciphertext
 
     async def unwrap_key(self, wrapped_dek: bytes, kek_id: str) -> bytes:
         """Unwrap *wrapped_dek* with the KEK identified by *kek_id*."""
@@ -60,9 +55,7 @@ class SoftwareKMS(KMSInterface):
             raise ValueError("wrapped_dek too short for nonce")
         stored_kek_id = wrapped_dek[2 : 2 + kek_id_len].decode("utf-8")
         if stored_kek_id != kek_id:
-            raise ValueError(
-                f"KEK ID mismatch: expected {kek_id!r}, got {stored_kek_id!r}"
-            )
+            raise ValueError(f"KEK ID mismatch: expected {kek_id!r}, got {stored_kek_id!r}")
         nonce = wrapped_dek[2 + kek_id_len : offset]
         ciphertext = wrapped_dek[offset:]
         kek = self._load_kek(kek_id)

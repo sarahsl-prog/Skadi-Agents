@@ -47,8 +47,10 @@ class PersistencePool:
             except Exception as exc:
                 last_exc = exc
                 _LOGGER.warning("PersistencePool connect attempt %d failed: %s", attempt + 1, exc)
-                await asyncio.sleep(2 ** attempt)
-        raise RuntimeError(f"Failed to create connection pool after 3 attempts: {last_exc}") from last_exc
+                await asyncio.sleep(2**attempt)
+        raise RuntimeError(
+            f"Failed to create connection pool after 3 attempts: {last_exc}"
+        ) from last_exc
 
     async def close(self) -> None:
         if self._pool is not None:
@@ -136,9 +138,7 @@ class CasePersistence:
         finally:
             await self._release(conn)
 
-    async def update_case(
-        self, case_id: str, status: str, expected_version: int
-    ) -> int:
+    async def update_case(self, case_id: str, status: str, expected_version: int) -> int:
         """Optimistically update case status.
 
         Returns the new version on success.
@@ -158,9 +158,7 @@ class CasePersistence:
                 expected_version,
             )
             if result is None:
-                raise VersionConflictError(
-                    f"Case {case_id} version {expected_version} is stale"
-                )
+                raise VersionConflictError(f"Case {case_id} version {expected_version} is stale")
             return int(result["version"])
         finally:
             await self._release(conn)
@@ -243,9 +241,7 @@ class CasePersistence:
                         branch_id=str(row["id"]),
                         case_id=str(row["case_id"]),
                         parent_branch_id=(
-                            str(row["parent_branch_id"])
-                            if row["parent_branch_id"]
-                            else None
+                            str(row["parent_branch_id"]) if row["parent_branch_id"] else None
                         ),
                         spec=BranchSpec.model_validate(hyp_data),
                         hypotheses=hypotheses,
@@ -294,9 +290,7 @@ class CasePersistence:
         case.evidence_refs = evidence_refs
         return case
 
-    async def update_branch(
-        self, branch_id: str, status: str, expected_version: int
-    ) -> int:
+    async def update_branch(self, branch_id: str, status: str, expected_version: int) -> int:
         """Optimistically update branch status.
 
         Returns the new version on success.

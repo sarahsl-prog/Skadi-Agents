@@ -134,8 +134,7 @@ async def depseudonymize(
     try:
         # 1. Check token exists before writing audit trail.
         row = await conn.fetchrow(
-            "SELECT original_value FROM wolfpack.pii_mappings "
-            "WHERE case_id = $1 AND token = $2",
+            "SELECT original_value FROM wolfpack.pii_mappings " "WHERE case_id = $1 AND token = $2",
             case_id,
             token,
         )
@@ -155,9 +154,7 @@ async def depseudonymize(
                 token,
             )
         except Exception as exc:
-            raise BreakGlassError(
-                "Audit write failed — depseudonymization blocked"
-            ) from exc
+            raise BreakGlassError("Audit write failed — depseudonymization blocked") from exc
 
         # 3. Decrypt original_value
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM

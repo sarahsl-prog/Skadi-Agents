@@ -97,9 +97,7 @@ class TestConcurrentBranchWrites:
 
         async def _updater(expected_version: int) -> int | None:
             try:
-                return await persistence.update_branch(
-                    branch_id, "closed", expected_version
-                )
+                return await persistence.update_branch(branch_id, "closed", expected_version)
             except VersionConflictError:
                 return None
 

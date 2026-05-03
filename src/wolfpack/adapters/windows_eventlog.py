@@ -189,9 +189,11 @@ class WindowsEventLogAdapter(TelemetrySource):
             raw_payload=raw_payload,
             entities=[Entity(type="host", value=computer)] if computer else [],
             severity=severity,
-            metadata={"channel": channel, "event_id": event_id}
-            if "channel" in locals()
-            else {"event_id": event_id},
+            metadata=(
+                {"channel": channel, "event_id": event_id}
+                if "channel" in locals()
+                else {"event_id": event_id}
+            ),
         )
 
     @staticmethod

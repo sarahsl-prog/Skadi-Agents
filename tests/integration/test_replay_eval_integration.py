@@ -23,9 +23,7 @@ async def pg_pool() -> Any:
     from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("pgvector/pgvector:pg16").start() as pg:
-        dsn = pg.get_connection_url().replace(
-            "postgresql+psycopg2://", "postgresql://"
-        )
+        dsn = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql://")
         pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
         conn = await pool.acquire()
         try:
@@ -157,20 +155,17 @@ class TestReplayEvaluation:
         post_cats: dict[str, Any] = post_metrics["categories"]
         baseline_cats: dict[str, Any] = baseline_metrics["categories"]
         assert (
-            post_cats["learning_positive"]["ndcg"]
-            >= baseline_cats["learning_positive"]["ndcg"]
+            post_cats["learning_positive"]["ndcg"] >= baseline_cats["learning_positive"]["ndcg"]
         ), "learning_positive NDCG should improve"
 
         # learning_neutral should not degrade (same or better)
         assert (
-            post_cats["learning_neutral"]["ndcg"]
-            >= baseline_cats["learning_neutral"]["ndcg"]
+            post_cats["learning_neutral"]["ndcg"] >= baseline_cats["learning_neutral"]["ndcg"]
         ), "learning_neutral NDCG should not degrade"
 
         # false_positive should show improvement
         assert (
-            post_cats["false_positive"]["ndcg"]
-            >= baseline_cats["false_positive"]["ndcg"]
+            post_cats["false_positive"]["ndcg"] >= baseline_cats["false_positive"]["ndcg"]
         ), "false_positive NDCG should improve"
 
     @pytest.mark.asyncio

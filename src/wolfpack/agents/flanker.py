@@ -116,9 +116,7 @@ def _build_flanker_agent(
         from wolfpack.config.settings import LLMConfig
 
         if cfg is None:
-            cfg = LLMConfig(
-                provider="ollama", model="llama3.2", base_url="http://localhost:11434"
-            )
+            cfg = LLMConfig(provider="ollama", model="llama3.2", base_url="http://localhost:11434")
         model = get_model(cfg)
 
     # Merge caller-supplied flags with canonical Settings so that

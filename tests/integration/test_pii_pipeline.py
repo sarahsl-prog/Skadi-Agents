@@ -55,8 +55,7 @@ async def pii_pool() -> AsyncGenerator[PersistencePool]:
 
 async def _create_case(conn: asyncpg.Connection, case_id: str) -> None:
     await conn.execute(
-        "INSERT INTO wolfpack.cases (id, seed, status, version) "
-        "VALUES ($1, $2, $3, $4)",
+        "INSERT INTO wolfpack.cases (id, seed, status, version) " "VALUES ($1, $2, $3, $4)",
         case_id,
         '{"type": "test", "raw_payload": {}}',
         "new",

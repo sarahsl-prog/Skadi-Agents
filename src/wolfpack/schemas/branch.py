@@ -17,14 +17,10 @@ class BranchSpec(BaseModel):
         default=None,
         description="Branch from which this branch was spawned (NULL for root).",
     )
-    hypothesis: Hypothesis = Field(
-        ..., description="The hypothesis that justifies the branch."
-    )
+    hypothesis: Hypothesis = Field(..., description="The hypothesis that justifies the branch.")
     depth: int = Field(
         default=0,
         ge=0,
         description="Branch depth from the root (0 = root branch).",
     )
-    created_by: str = Field(
-        ..., description="Agent or analyst that created the branch."
-    )
+    created_by: str = Field(..., description="Agent or analyst that created the branch.")

@@ -41,9 +41,7 @@ async def persistence_pool() -> AsyncGenerator[PersistencePool]:
         for key in list(env.keys()):
             if key.startswith("WOLFPACK_"):
                 env.pop(key, None)
-        alembic_path = str(
-            (Path(sys.executable).parent / "alembic").resolve()
-        )
+        alembic_path = str((Path(sys.executable).parent / "alembic").resolve())
         subprocess.run(  # noqa: S603
             [alembic_path, "upgrade", "head"],
             env=env,
@@ -75,9 +73,7 @@ class TestCasePersistenceIntegration:
         assert fetched.status == "new"
         assert fetched.version == 1
 
-    async def test_update_case_optimistic_concurrency(
-        self, persistence: CasePersistence
-    ) -> None:
+    async def test_update_case_optimistic_concurrency(self, persistence: CasePersistence) -> None:
         case = CaseState(
             case_id=str(uuid.uuid4()),
             seed=Seed(type="alert", raw_payload={"severity": "high"}),

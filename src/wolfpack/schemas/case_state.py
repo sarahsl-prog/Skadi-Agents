@@ -25,9 +25,7 @@ class BranchState(BaseModel):
 
     branch_id: str = Field(..., description="Stable branch identifier (UUID).")
     case_id: str = Field(..., description="Owning case identifier.")
-    parent_branch_id: str | None = Field(
-        default=None, description="Parent branch (NULL for root)."
-    )
+    parent_branch_id: str | None = Field(default=None, description="Parent branch (NULL for root).")
     spec: BranchSpec = Field(..., description="Original branch specification.")
     entities: list[Entity] = Field(
         default_factory=list, description="Entities discovered in this branch."
@@ -102,7 +100,9 @@ class CaseState(BaseModel):
         default=None,
         description="Analyst review decision: approved, escalate, close_benign, continue.",
     )
-    verdict_decision: Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] | None = Field(
+    verdict_decision: (
+        Literal["MALICIOUS", "BENIGN", "INCONCLUSIVE", "NEEDS_MORE_INFO", "SUSPICIOUS"] | None
+    ) = Field(
         default=None,
         description="Closer verdict: MALICIOUS, BENIGN, INCONCLUSIVE, NEEDS_MORE_INFO, or SUSPICIOUS.",
     )

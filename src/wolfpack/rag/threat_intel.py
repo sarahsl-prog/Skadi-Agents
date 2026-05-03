@@ -58,9 +58,7 @@ class ThreatIntelPipeline(RAGPipeline):
         candidates: list[tuple[RAGDocument, float, str]] = []
 
         # Keyword search
-        keyword_results = await self._store.keyword_search(
-            query, top_k=top_k * 2, filters=filters
-        )
+        keyword_results = await self._store.keyword_search(query, top_k=top_k * 2, filters=filters)
         for rank, doc in enumerate(keyword_results):
             # Normalised score decays with rank
             score = 1.0 - (rank / max(len(keyword_results), 1))

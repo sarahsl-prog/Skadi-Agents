@@ -87,9 +87,7 @@ class CaseHistoryPipeline(RAGPipeline):
             candidates.append((doc, score, "semantic"))
 
         # Keyword search (fallback / tie-breaker)
-        keyword_results = await self._store.keyword_search(
-            query, top_k=top_k * 2, filters=filters
-        )
+        keyword_results = await self._store.keyword_search(query, top_k=top_k * 2, filters=filters)
         for rank, doc in enumerate(keyword_results):
             score = 1.0 - (rank / max(len(keyword_results), 1))
             candidates.append((doc, score, "keyword"))

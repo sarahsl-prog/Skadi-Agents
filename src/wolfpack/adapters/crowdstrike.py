@@ -71,7 +71,9 @@ class CrowdStrikeAdapter(TelemetrySource):
             )
             if detail_resp.status_code == 200:
                 detail_data = detail_resp.json()
-                details = {d.get("detection_id", d.get("id")): d for d in detail_data.get("resources", [])}
+                details = {
+                    d.get("detection_id", d.get("id")): d for d in detail_data.get("resources", [])
+                }
             else:
                 details = {}
 
@@ -79,14 +81,22 @@ class CrowdStrikeAdapter(TelemetrySource):
                 detail = details.get(detect_id, {})
                 ts_str = detail.get("last_behavior") or detail.get("timestamp")
                 try:
-                    ts = datetime.fromisoformat(str(ts_str).replace("Z", "+00:00")) if ts_str else time_window.start
+                    ts = (
+                        datetime.fromisoformat(str(ts_str).replace("Z", "+00:00"))
+                        if ts_str
+                        else time_window.start
+                    )
                 except ValueError:
                     ts = time_window.start
                 events.append(
                     Event(
                         timestamp=ts,
                         source=self.name,
-                        raw_payload={"detect_id": detect_id, "entity": entity.model_dump(), "detail": detail},
+                        raw_payload={
+                            "detect_id": detect_id,
+                            "entity": entity.model_dump(),
+                            "detail": detail,
+                        },
                         entities=[entity],
                         severity="high",
                     )
@@ -104,7 +114,11 @@ class CrowdStrikeAdapter(TelemetrySource):
             return False
 
     async def _ensure_token(self) -> None:
-        if self._token is not None and self._token_expires is not None and datetime.now(UTC) < self._token_expires:
+        if (
+            self._token is not None
+            and self._token_expires is not None
+            and datetime.now(UTC) < self._token_expires
+        ):
             return
         if not self._client_id or not self._client_secret:
             return

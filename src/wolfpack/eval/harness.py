@@ -76,6 +76,7 @@ class EvalResult:
         actual = self.tracker_output.get("hypotheses", [])
         if not expected:
             return 1.0 if not actual else 0.0
+
         # Token-overlap (Jaccard) match on description tokens
         def _tokens(text: str) -> set[str]:
             return set(text.lower().split())
@@ -174,9 +175,7 @@ class EvalHarness:
         try:
             import mlflow
 
-            mlflow.log_metrics(
-                {k: v for k, v in metrics.items() if isinstance(v, (int, float))}
-            )
+            mlflow.log_metrics({k: v for k, v in metrics.items() if isinstance(v, (int, float))})
             mlflow.log_dict(
                 metrics.get("confidence_distribution", {}),
                 artifact_file="confidence_distribution.json",
