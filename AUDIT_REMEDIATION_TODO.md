@@ -615,9 +615,9 @@ Create dedicated test files for:
 - [ ] `config/validators.py`
 
 ### 16.2 Test Fixes
-- [ ] `test_closer.py:44`: Fix `Confidence.PLUSIBLE` → `Confidence.PLAUSIBLE`
-- [ ] `test_closer.py:62`: Fix fragile `tool.__name__` comparison
-- [ ] `test_prompt_injection_rag.py:20-42`: Test production `_sanitize()` function
+- [x] `test_closer.py:44`: Fix `Confidence.PLUSIBLE` → `Confidence.PLAUSIBLE`
+- [x] `test_closer.py:62`: Fix fragile `tool.__name__` comparison
+- [x] `test_prompt_injection_rag.py:20-42`: Test production `_sanitize()` function
 
 ### 16.3 Edge Case Coverage
 Add tests for:
@@ -641,22 +641,22 @@ Add tests for:
 
 | Priority | Category | Issue Count | Status |
 |----------|----------|-------------|--------|
-| 1 | Critical Runtime Bugs | 8 | ⬜ Pending |
-| 2 | High Security | 6 | ⬜ Pending |
-| 3 | High Schema/Type | 4 | ⬜ Pending |
-| 4 | High Functional | 7 | ⬜ Pending |
-| 5 | Medium Orchestrator | 5 | ⬜ Pending |
-| 6 | Medium Agents | 6 | ⬜ Pending |
-| 7 | Medium API | 5 | ⬜ Pending |
-| 8 | Medium Observability | 4 | ⬜ Pending |
-| 9 | Medium RAG/Adapters | 11 | ⬜ Pending |
-| 10 | Medium Schemas | 5 | ⬜ Pending |
-| 11 | Medium Learning/Eval | 4 | ⬜ Pending |
-| 12 | Medium Crypto/Config | 4 | ⬜ Pending |
-| 13 | Medium LLM/Observability | 3 | ⬜ Pending |
-| 14 | Low Severity | 52 | ⬜ Pending |
-| 15 | Documentation | 10 | ⬜ Pending |
-| 16 | Test Gaps | 4 categories | ⬜ Pending |
+| 1 | Critical Runtime Bugs | 8 | ✅ Done |
+| 2 | High Security | 6 | ✅ Done |
+| 3 | High Schema/Type | 4 | ✅ Done |
+| 4 | High Functional | 7 | ✅ Done |
+| 5 | Medium Orchestrator | 5 | ✅ Done |
+| 6 | Medium Agents | 6 | ✅ Done |
+| 7 | Medium API | 5 | ✅ Done |
+| 8 | Medium Observability | 4 | ✅ Done |
+| 9 | Medium RAG/Adapters | 11 | ✅ Done |
+| 10 | Medium Schemas | 5 | ⬜ Deferred (blast radius) |
+| 11 | Medium Learning/Eval | 4 | ✅ Done |
+| 12 | Medium Crypto/Config | 4 | ✅ Done |
+| 13 | Medium LLM/Observability | 3 | ⬜ Deferred |
+| 14 | Low Severity | 52 | ✅ Done |
+| 15 | Documentation | 10 | ✅ Done |
+| 16 | Test Gaps | 4 categories | ✅ Partial (fixes + schema) |
 
 ---
 
