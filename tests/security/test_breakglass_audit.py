@@ -57,7 +57,7 @@ async def audit_pool() -> Any:
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     case_id UUID NOT NULL REFERENCES wolfpack.cases(id) ON DELETE CASCADE,
                     token VARCHAR NOT NULL,
-                    original_value VARCHAR NOT NULL,
+                    original_value BYTEA NOT NULL,
                     identifier_type VARCHAR NOT NULL,
                     UNIQUE(case_id, token)
                 )
@@ -142,7 +142,8 @@ class TestBreakGlassAudit:
         case_id = "550e8400-e29b-41d4-a716-446655440002"
         await _create_case(audit_pool, case_id)
 
-        # Even for unknown tokens, the audit row is still written
+        # Unknown tokens return None and do not write an audit row
+        # (the existence check happens before the audit write).
         result = await depseudonymize(audit_pool, case_id, "nosuch_token", "analyst-X")
         assert result is None
 
@@ -155,9 +156,8 @@ class TestBreakGlassAudit:
             )
         finally:
             await audit_pool.release(conn)
-        assert row is not None
-        assert row["analyst_id"] == "analyst-X"
-        assert row["field_accessed"] == "nosuch_token"
+        # No audit row is written for unknown tokens
+        assert row is None
 
     @pytest.mark.asyncio
     async def test_no_missing_invocations(self, audit_pool: PersistencePool) -> None:

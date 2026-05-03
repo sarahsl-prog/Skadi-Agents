@@ -89,7 +89,7 @@ async def crypto_pool() -> Any:
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     case_id UUID NOT NULL REFERENCES wolfpack.cases(id) ON DELETE CASCADE,
                     token VARCHAR NOT NULL,
-                    original_value VARCHAR NOT NULL,
+                    original_value BYTEA NOT NULL,
                     identifier_type VARCHAR NOT NULL,
                     UNIQUE(case_id, token)
                 )
