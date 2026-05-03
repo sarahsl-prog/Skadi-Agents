@@ -35,7 +35,7 @@ async def case_websocket(websocket: WebSocket, case_id: str) -> None:
             return
         # Validate token using the same logic as HTTP routes
         await _verify_token(auth_msg.get("token"))
-    except asyncio.TimeoutError:
+    except TimeoutError:
         await websocket.close(code=1008, reason="Auth timeout")
         return
     except (json.JSONDecodeError, KeyError, WebSocketDisconnect):

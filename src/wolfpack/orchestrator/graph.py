@@ -102,7 +102,7 @@ def _wrap_with_nats(
                 nats_client.publish(subject, sanitized),
                 timeout=5.0,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # TODO: write ``nats_publish_failed`` entry to evidence ledger
             import logging
 

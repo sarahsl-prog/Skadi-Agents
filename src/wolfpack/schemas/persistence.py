@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import uuid
 
 import asyncpg
-import asyncio
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 

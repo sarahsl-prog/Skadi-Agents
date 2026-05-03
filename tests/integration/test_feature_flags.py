@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from wolfpack.adapters import (
     CloudTrailSource,
     CrowdStrikeAdapter,
@@ -90,7 +88,7 @@ class TestFeatureFlagGating:
     def test_unknown_adapter_ignored(self) -> None:
         """Adapters without a known flag mapping are silently skipped."""
         # Create a custom adapter
-        from wolfpack.adapters.base import Event, TelemetrySource, TimeWindow
+        from wolfpack.adapters.base import TelemetrySource, TimeWindow
         from wolfpack.schemas.entity import Entity
 
         class CustomAdapter(TelemetrySource):

@@ -5,10 +5,10 @@ Moves approved analyst decisions into the case-history knowledge base.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import asyncpg
-import logging
 
 from wolfpack.eval.replay import ReplayHarness
 
@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 from wolfpack.learning.summary import format_case_summary
 from wolfpack.rag.case_history import CaseHistoryPipeline
 from wolfpack.schemas.confidence import Confidence
-from wolfpack.schemas.persistence import CasePersistence, PersistencePool
+from wolfpack.schemas.persistence import CasePersistence
 
 
 class LearningQueueWorker:

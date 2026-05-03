@@ -10,7 +10,8 @@ from __future__ import annotations
 import asyncio
 import functools
 import threading
-from typing import Any, Awaitable, Callable, cast
+from collections.abc import Awaitable, Callable
+from typing import Any, cast
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter

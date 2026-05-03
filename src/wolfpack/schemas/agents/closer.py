@@ -1,7 +1,8 @@
 """Closer agent I/O models."""
 
-from pydantic import BaseModel, Field
 from typing import Literal
+
+from pydantic import BaseModel, Field
 
 from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.evidence import EvidenceRef

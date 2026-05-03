@@ -7,8 +7,6 @@ multiple singletons.
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import Request
 
 from wolfpack.schemas.persistence import PersistencePool
@@ -21,7 +19,7 @@ def get_pool(request: Request) -> PersistencePool:
 
     Used as a FastAPI dependency: ``Depends(get_pool)``.
     """
-    global _pool  # noqa: PLW0603
+    global _pool
     if _pool is None:
         from wolfpack.config.settings import Settings
 

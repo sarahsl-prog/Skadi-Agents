@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from wolfpack.orchestrator.budget import BranchBudget, BudgetRemaining
+from wolfpack.orchestrator.budget import BranchBudget
 from wolfpack.orchestrator.dedup import hypothesis_dedup
 from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.hypothesis import Hypothesis

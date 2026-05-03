@@ -7,9 +7,8 @@ Wraps :meth:`pydantic_ai.Agent.run` and :meth:`Agent.run_sync` so that
 
 from __future__ import annotations
 
-from typing import Any
-
 import logging
+from typing import Any
 
 from opentelemetry import trace
 

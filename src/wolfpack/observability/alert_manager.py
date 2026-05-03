@@ -17,7 +17,6 @@ import httpx
 from opentelemetry import trace
 
 from wolfpack.config.settings import Settings
-from wolfpack.observability.alerts import get_builtin_alerts
 
 TRACER = trace.get_tracer("wolfpack")
 

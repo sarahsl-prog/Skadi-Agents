@@ -7,7 +7,6 @@ distributed traces span across the event bus.
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from opentelemetry import baggage, context
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator

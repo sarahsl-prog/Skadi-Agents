@@ -3,7 +3,6 @@
 from pydantic import BaseModel, Field
 
 from wolfpack.schemas.case_state import CaseState
-from wolfpack.schemas.seed import Seed
 
 
 class AlphaOutput(BaseModel):

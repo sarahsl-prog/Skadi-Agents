@@ -7,8 +7,9 @@ a payload dict when triggered (or ``None`` if not triggered).
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any, Callable
+from typing import Any
 
 
 class AlertSpec:

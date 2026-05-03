@@ -6,13 +6,12 @@ and scheduling logic.
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from wolfpack.observability.alerts import get_builtin_alerts
 from wolfpack.observability.alert_manager import AlertManager
+from wolfpack.observability.alerts import get_builtin_alerts
 
 
 @pytest.fixture

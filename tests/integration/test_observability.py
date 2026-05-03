@@ -10,7 +10,6 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from opentelemetry import trace
 
 from wolfpack.config.settings import Settings
 from wolfpack.observability.baggage import get_case_baggage, set_case_baggage

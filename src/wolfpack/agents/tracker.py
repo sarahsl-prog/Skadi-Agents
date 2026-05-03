@@ -19,10 +19,7 @@ from wolfpack.llm.factory import get_model
 from wolfpack.observability.agents import traced_agent_run
 from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
 from wolfpack.schemas.case_state import CaseState
-from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.entity import Entity
-from wolfpack.schemas.evidence import EvidenceRef
-from wolfpack.schemas.hypothesis import Hypothesis
 
 # ------------------------------------------------------------------ #
 # Models

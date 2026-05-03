@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,7 +20,6 @@ from wolfpack.schemas.branch import BranchSpec
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.entity import Entity
-from wolfpack.schemas.evidence import EvidenceRef
 from wolfpack.schemas.hypothesis import Hypothesis
 from wolfpack.schemas.seed import Seed
 

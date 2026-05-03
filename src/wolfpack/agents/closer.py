@@ -24,7 +24,6 @@ from wolfpack.rag.tools import (
 )
 from wolfpack.schemas.agents.closer import CloserInput, CloserOutput
 from wolfpack.schemas.case_state import CaseState
-from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.verdict import BranchSummary, VerdictPacket
 
 # ------------------------------------------------------------------ #
@@ -147,7 +146,6 @@ def _build_tools(
             feature_flags=feature_flags or {},
         )
     else:
-        from wolfpack.adapters.tools import build_adapter_tools
         from wolfpack.adapters import (
             CrowdStrikeAdapter,
             FirewallAdapter,
@@ -155,6 +153,7 @@ def _build_tools(
             SyslogAdapter,
             WindowsEventLogAdapter,
         )
+        from wolfpack.adapters.tools import build_adapter_tools
 
         adapter_tools = build_adapter_tools(
             [

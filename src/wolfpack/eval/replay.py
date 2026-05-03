@@ -11,8 +11,8 @@ import math
 from pathlib import Path
 from typing import Any
 
-from wolfpack.rag.case_history import CaseHistoryPipeline
 from wolfpack.rag.base import RAGDocument
+from wolfpack.rag.case_history import CaseHistoryPipeline
 
 
 class ReplaySet:

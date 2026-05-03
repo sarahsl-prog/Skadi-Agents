@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +11,7 @@ from wolfpack.api.routes import breakglass, cases, review, ws
 
 
 @asynccontextmanager
-async def _lifespan(app: FastAPI):  # noqa: ARG001
+async def _lifespan(app: FastAPI):
     """Application lifespan handler."""
     yield
 

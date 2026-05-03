@@ -10,7 +10,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from wolfpack.adapters.base import TimeWindow
@@ -20,10 +19,6 @@ from wolfpack.observability.agents import traced_agent_run
 from wolfpack.rag.tools import RAGDeps, case_history_tool, threat_intel_tool
 from wolfpack.schemas.agents.flanker import FlankerInput, FlankerOutput
 from wolfpack.schemas.case_state import CaseState
-from wolfpack.schemas.confidence import Confidence
-from wolfpack.schemas.entity import Entity
-from wolfpack.schemas.evidence import EvidenceRef
-from wolfpack.schemas.hypothesis import Hypothesis
 
 # ------------------------------------------------------------------ #
 # Dependencies
@@ -137,7 +132,6 @@ def _build_flanker_agent(
     ]
 
     # Build adapter tools based on feature flags
-    from wolfpack.adapters.tools import build_adapter_tools
     from wolfpack.adapters import (
         CloudTrailSource,
         CrowdStrikeAdapter,
@@ -149,6 +143,7 @@ def _build_flanker_agent(
         WindowsEventLogAdapter,
         ZeekSuricataSource,
     )
+    from wolfpack.adapters.tools import build_adapter_tools
 
     all_adapters = [
         SyslogAdapter(),

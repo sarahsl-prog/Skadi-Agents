@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from wolfpack.api.auth import RequireAuth
 from wolfpack.api.dependencies import get_pool
-from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.persistence import CasePersistence, PersistencePool
 
 router = APIRouter()
@@ -16,7 +15,7 @@ router = APIRouter()
 
 @router.get("/cases")
 async def list_cases(
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     status_filter: str | None = None,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -55,7 +54,7 @@ async def list_cases(
 @router.get("/cases/{case_id}")
 async def get_case(
     case_id: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Get full case details including branches, hypotheses, and evidence."""
@@ -84,7 +83,7 @@ async def get_case(
 @router.get("/cases/{case_id}/timeline")
 async def get_case_timeline(
     case_id: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Return ordered evidence ledger entries for the case."""
@@ -112,7 +111,7 @@ async def get_case_timeline(
 @router.get("/cases/{case_id}/verdict")
 async def get_case_verdict(
     case_id: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Return the current verdict packet for the case (if present)."""

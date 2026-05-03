@@ -17,7 +17,7 @@ router = APIRouter()
 
 @router.get("/review/queue")
 async def review_queue(
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Return cases awaiting analyst review."""
@@ -82,7 +82,7 @@ async def _assert_case_in_review(conn: Any, case_id: str) -> None:
 @router.post("/review/{case_id}/approve")
 async def approve_case(
     case_id: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Approve learning for a case (moves to learning queue)."""
@@ -105,7 +105,7 @@ async def approve_case(
 @router.post("/review/{case_id}/escalate")
 async def escalate_case(
     case_id: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Escalate a case (re-route to Tracker/Flanker)."""
@@ -128,7 +128,7 @@ async def escalate_case(
 @router.post("/review/{case_id}/close_benign")
 async def close_benign(
     case_id: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Close a case as benign."""
@@ -151,7 +151,7 @@ async def close_benign(
 @router.post("/review/{case_id}/continue_hunt")
 async def continue_hunt(
     case_id: str,
-    auth: RequireAuth,  # noqa: ARG001
+    auth: RequireAuth,
     pool: PersistencePool = Depends(get_pool),
 ) -> dict[str, Any]:
     """Continue hunting (route back to Alpha Dispatcher)."""
