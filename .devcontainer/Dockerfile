@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.11-slim-bookworm
 
 ARG USERNAME=devuser
 ARG USER_UID=1000
@@ -18,13 +18,10 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && mkdir -p /home/${USERNAME}/.vscode-server/extensions \
     && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
 
-# Poetry - install as root, available system-wide
-ENV POETRY_VERSION=1.8.3
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true
-ENV POETRY_NO_INTERACTION=1
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="${POETRY_HOME}/bin:${PATH}"
+# Install uv (fast Python package manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv \
+    && mv /root/.local/bin/uvx /usr/local/bin/uvx
 
 # Node globals for AI CLI tools
 RUN npm install -g @anthropic-ai/claude-code@latest

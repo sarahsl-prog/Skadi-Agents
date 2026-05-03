@@ -1,5 +1,5 @@
 {
-  "name": "Python 3.12 AI Sandbox",
+  "name": "WolfPack (Python 3.11)",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
@@ -12,7 +12,7 @@
   // ── Security isolation ──────────────────────────────────────────────────
   "runArgs": [
     "--cap-drop=ALL",          // drop ALL Linux capabilities
-    "--cap-add=CHOWN",         // re-add only what Poetry/pip needs
+    "--cap-add=CHOWN",         // re-add only what pip/uv needs
     "--cap-add=SETUID",
     "--cap-add=SETGID",
     "--security-opt=no-new-privileges:true",  // no priv escalation ever
@@ -31,8 +31,8 @@
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
 
   "mounts": [
-    // Persistent Poetry cache (so you don't re-download deps on rebuild)
-    "source=poetry-cache,target=/root/.cache/pypoetry,type=volume",
+    // Persistent uv cache (so you don't re-download deps on rebuild)
+    "source=uv-cache,target=/home/devuser/.cache/uv,type=volume",
     // Persistent VS Code extensions
     "source=vscode-ext-cache,target=/home/devuser/.vscode-server/extensions,type=volume"
   ],
@@ -41,7 +41,6 @@
   "containerEnv": {
     "PYTHONDONTWRITEBYTECODE": "1",
     "PYTHONUNBUFFERED": "1",
-    "POETRY_VIRTUALENVS_IN_PROJECT": "true",
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",  // from HOST env
     "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
   },
@@ -54,10 +53,7 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-python.pylint",
         "ms-python.mypy-type-checker",
-        "ms-python.black-formatter",
-        "ms-python.isort",
         "charliermarsh.ruff",
         "tamasfe.even-better-toml",
         "donjayamanne.githistory",
@@ -66,13 +62,10 @@
       ],
       "settings": {
         "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
-        "python.formatting.provider": "black",
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-          "source.organizeImports": true
+          "source.organizeImports": "explicit"
         },
-        "pylint.args": ["--max-line-length=100"],
-        "mypy-type-checker.args": ["--strict"],
         "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
