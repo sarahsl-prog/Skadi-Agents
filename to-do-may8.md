@@ -19,7 +19,7 @@ This document tracks the fixes for the issues identified during the core agent l
     - **Fix:** Migrate `BranchBudget` state from Python `dict` to Redis or Postgres.
     - **Validation:** Multi-process simulation test verifying budget is shared.
 
-- [ ] **SEC-01: Telemetry Source Prompt-Injection Defense**
+- [ ] **SEC-01: Telemetry Source Prompt-Injection Defense** *(In Progress 2026-05-08)*
     - **Problem:** Potential for prompt injection via attacker-controlled log data.
     - **Fix:** Implement explicit delimiters and instruction-repetition guards in the `traced_agent_run` or agent prompts.
     - **Validation:** New tests in `tests/security/` specifically for telemetry-based injection.
@@ -39,5 +39,5 @@ This document tracks the fixes for the issues identified during the core agent l
 **Status:**
 - Total items: 6
 - Completed: 4
-- In Progress: 0
-- Remaining: 2
+- In Progress: 1
+- Remaining: 1
