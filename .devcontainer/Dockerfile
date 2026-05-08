@@ -8,7 +8,7 @@ ARG USER_GID=${USER_UID}
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl wget ca-certificates gnupg \
     build-essential libssl-dev libffi-dev \
-    nodejs npm \
+    nodejs npm docker.io docker-compose \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user (because running as root is a cry for help)
@@ -17,7 +17,8 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
        -m -s /bin/bash ${USERNAME} \
     && mkdir -p /home/${USERNAME}/.vscode-server/extensions \
     && mkdir -p /home/${USERNAME}/.cache/uv \
-    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
+    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME} \
+    && usermod -aG docker ${USERNAME}
 
 # Install uv (fast Python package manager)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
