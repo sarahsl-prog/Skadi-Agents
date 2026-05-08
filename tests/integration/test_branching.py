@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
+import asyncpg
 import pytest
 
 from wolfpack.orchestrator.budget import BranchBudget
@@ -11,41 +13,90 @@ from wolfpack.orchestrator.dedup import hypothesis_dedup
 from wolfpack.schemas.confidence import Confidence
 from wolfpack.schemas.hypothesis import Hypothesis
 
+pytestmark = pytest.mark.skipif(
+    pytest.importorskip("testcontainers", reason="testcontainers not installed") is None,
+    reason="testcontainers not installed",
+)
+
+
+# ---------------------------------------------------------------------------
+# Postgres-backed budget fixture
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+async def budget_pool() -> AsyncGenerator[asyncpg.Pool]:
+    from testcontainers.postgres import PostgresContainer
+
+    with PostgresContainer("pgvector/pgvector:pg16").start() as pg:
+        dsn = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql://")
+        pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5)
+
+        async with pool.acquire() as conn:
+            # Ensure wolfpack schema exists
+            await conn.execute("CREATE SCHEMA IF NOT EXISTS wolfpack")
+
+        yield pool
+        await pool.close()
+
+
+@pytest.fixture()
+async def branch_budget(budget_pool: asyncpg.Pool) -> AsyncGenerator[BranchBudget]:
+    """Yield a BranchBudget backed by a live Postgres testcontainer."""
+    from wolfpack.config.settings import BranchBudgetConfig
+
+    config = BranchBudgetConfig(max_depth=3, max_branches_per_case=10)
+    budget = BranchBudget(config=config, pool=budget_pool)
+    yield budget
+
+
+# ---------------------------------------------------------------------------
+# Budget tests
+# ---------------------------------------------------------------------------
 
 class TestBranchBudget:
-    """Branch-explosion controls."""
+    """Branch-explosion controls backed by Postgres."""
 
     @pytest.mark.anyio
-    async def test_default_budget_allows_creation(self) -> None:
-        budget = BranchBudget()
-        assert await budget.check("case-001", branch_depth=1) is True
+    async def test_default_budget_allows_creation(self, branch_budget: BranchBudget) -> None:
+        assert await branch_budget.check("case-001", branch_depth=1) is True
 
     @pytest.mark.anyio
-    async def test_depth_limit_enforced(self) -> None:
-        budget = BranchBudget()
-        assert await budget.check("case-001", branch_depth=3) is True
-        assert await budget.check("case-001", branch_depth=4) is False
+    async def test_depth_limit_enforced(self, branch_budget: BranchBudget) -> None:
+        assert await branch_budget.check("case-001", branch_depth=3) is True
+        assert await branch_budget.check("case-001", branch_depth=4) is False
 
     @pytest.mark.anyio
-    async def test_branch_count_limit_enforced(self) -> None:
-        budget = BranchBudget()
-        budget.consume("case-001", branches=10)
-        assert await budget.check("case-001", branch_depth=1) is False
+    async def test_branch_count_limit_enforced(self, branch_budget: BranchBudget) -> None:
+        await branch_budget.consume("case-001", branches=10)
+        assert await branch_budget.check("case-001", branch_depth=1) is False
 
     @pytest.mark.anyio
-    async def test_remaining_budget(self) -> None:
-        budget = BranchBudget()
-        budget.consume("case-001", branches=2)
-        rem = await budget.remaining("case-001")
+    async def test_remaining_budget(self, branch_budget: BranchBudget) -> None:
+        await branch_budget.consume("case-001", branches=2)
+        rem = await branch_budget.remaining("case-001")
         assert rem.branches_remaining == 8
         assert rem.depth_remaining == 3
 
     @pytest.mark.anyio
-    async def test_budget_is_per_case(self) -> None:
-        budget = BranchBudget()
-        budget.consume("case-001", branches=10)
-        assert await budget.check("case-001", branch_depth=1) is False
-        assert await budget.check("case-002", branch_depth=1) is True
+    async def test_budget_is_per_case(self, branch_budget: BranchBudget) -> None:
+        await branch_budget.consume("case-001", branches=10)
+        assert await branch_budget.check("case-001", branch_depth=1) is False
+        assert await branch_budget.check("case-002", branch_depth=1) is True
+
+    @pytest.mark.anyio
+    async def test_atomic_check_and_consume(self, branch_budget: BranchBudget) -> None:
+        # First 10 should succeed atomically
+        for i in range(10):
+            assert await branch_budget.check_and_consume("case-003", branch_depth=1) is True
+        # Next one should fail
+        assert await branch_budget.check_and_consume("case-003", branch_depth=1) is False
+
+    @pytest.mark.anyio
+    async def test_release_restores_budget(self, branch_budget: BranchBudget) -> None:
+        await branch_budget.consume("case-004", branches=10)
+        assert await branch_budget.check("case-004", branch_depth=1) is False
+        await branch_budget.release("case-004", branches=2)
+        assert await branch_budget.check("case-004", branch_depth=1) is True
 
 
 class TestHypothesisDedup:
