@@ -13,6 +13,7 @@ from typing import Any
 from opentelemetry import trace
 
 from wolfpack.observability.baggage import attach_baggage_to_span
+from wolfpack.security.prompt_defense import defend_agent_prompt
 
 TRACER = trace.get_tracer("wolfpack")
 _LOGGER = logging.getLogger(__name__)
@@ -29,6 +30,9 @@ async def traced_agent_run(
 ) -> Any:
     """Run a Pydantic AI agent inside an OTel span.
 
+    The *prompt* is passed through :func:`defend_agent_prompt` before being
+    sent to the LLM, providing a baseline prompt-injection defense layer.
+
     Span attributes:
     - ``wolfpack.agent_name`` — *agent_name*
     - ``wolfpack.model_name`` — *model_name* (inferred from agent if None)
@@ -43,6 +47,8 @@ async def traced_agent_run(
         model_name = _infer_model_name(agent)
     if provider is None:
         provider = _infer_provider(agent)
+
+    safe_prompt = defend_agent_prompt(prompt)
 
     with TRACER.start_as_current_span(
         f"agent.run.{agent_name}",
@@ -59,9 +65,9 @@ async def traced_agent_run(
 
         try:
             if deps is not None:
-                result = await agent.run(prompt, deps=deps)
+                result = await agent.run(safe_prompt, deps=deps)
             else:
-                result = await agent.run(prompt)
+                result = await agent.run(safe_prompt)
         except Exception as exc:
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR, str(exc))
