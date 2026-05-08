@@ -115,15 +115,11 @@ def _wrap_with_nats(
         await _publish_safe(subject, result)
         return result  # type: ignore[return-value]
 
-    def _sync_wrapped(state: CaseState) -> dict[str, Any]:
-        # Fire-and-forget from a sync node; acceptable for Phase 2
-        # skeleton where NATS is best-effort fan-out.
+    async def _sync_wrapped(state: CaseState) -> dict[str, Any]:
+        """Now converted to async to avoid race conditions with NATS publishing."""
+        # In a real scenario, if the node is truly sync, we wrap it here
         result = node(state)
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(_publish_safe(subject, result))  # noqa: RUF006
-        except RuntimeError:
-            asyncio.run(_publish_safe(subject, result))
+        await _publish_safe(subject, result)
         return result  # type: ignore[return-value]
 
     return _async_wrapped if asyncio.iscoroutinefunction(node) else _sync_wrapped
