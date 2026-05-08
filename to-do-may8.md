@@ -14,7 +14,7 @@ This document tracks the fixes for the issues identified during the core agent l
     - **Validation:** Integration test ensuring ledger/event consistency during rapid process shutdown.
 
 ## Priority 2: Architecture & Reliability
-- [ ] **BUDG-01: Externalize Branch Budget State**
+- [x] **BUDG-01: Externalize Branch Budget State** *(Completed 2026-05-08)*
     - **Problem:** Budget state is in-memory, causing inconsistency in multi-worker environments.
     - **Fix:** Migrate `BranchBudget` state from Python `dict` to Redis or Postgres.
     - **Validation:** Multi-process simulation test verifying budget is shared.
@@ -25,7 +25,7 @@ This document tracks the fixes for the issues identified during the core agent l
     - **Validation:** New tests in `tests/security/` specifically for telemetry-based injection.
 
 ## Priority 3: Test Coverage & Verification
-- [ ] **TEST-01: Implement Ledger Integrity Verification Test**
+- [x] **TEST-01: Implement Ledger Integrity Verification Test** *(Completed 2026-05-08)*
     - **Problem:** No automated test for the hash-chain tampering detection.
     - **Fix:** Create a test that manually alters a ledger entry and asserts `verify_chain()` failure.
     - **Validation:** Successful execution of the new integrity test.
@@ -38,6 +38,6 @@ This document tracks the fixes for the issues identified during the core agent l
 ---
 **Status:**
 - Total items: 6
-- Completed: 2
+- Completed: 4
 - In Progress: 0
-- Remaining: 4
+- Remaining: 2
