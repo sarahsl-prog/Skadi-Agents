@@ -59,8 +59,10 @@ class AlphaDispatcher:
             output_type=AlphaOutput,
             instructions=(
                 "You are the Alpha Dispatcher. Normalise hunt seeds into "
-                "structured CaseState objects. Use the create_case tool to "
-                "persist the case in the database."
+                "structured CaseState objects. You MUST identify and extract all "
+                "relevant entities (IPs, hostnames, usernames, domains, hashes) "
+                "from the raw seed and include them in the root branch's entities list. "
+                "Use the create_case tool to persist the case in the database."
             ),
         )
 

@@ -204,10 +204,23 @@ async def run_tracker(
 
     # Build input from case seed
     seed = state.seed
-    entities = seed.raw_payload.get("entities", []) if isinstance(seed.raw_payload, dict) else []
+    entities = []
+    if isinstance(seed.raw_payload, dict):
+        entities = seed.raw_payload.get("entities", [])
+    elif isinstance(seed.raw_payload, str):
+        # If seed is raw text, fallback to the aggregated entities in the case state
+        # since Alpha should have normalized them into the root branch.
+        entities = [e for b in state.branches for e in b.entities]
+
     if not entities and state.branches:
-        # Fallback: use entities from the root branch
-        entities = [e.model_dump() for b in state.branches for e in b.entities]
+        # Safety fallback: extract from all branches if root is empty
+        entities = [e for b in state.branches for e in b.entities]
+    
+    # Ensure we are working with a clean list of Entity objects
+    normalized_entities = [
+        Entity.model_validate(e) if isinstance(e, dict) else e 
+        for e in entities
+    ]
 
     time_window = TimeWindow(
         start=datetime.now(UTC) - timedelta(hours=24),
@@ -216,7 +229,7 @@ async def run_tracker(
 
     tracker_input = TrackerInput(
         case_id=state.case_id,
-        entities=[Entity.model_validate(e) if isinstance(e, dict) else e for e in entities],
+        entities=normalized_entities,
         time_window=time_window,
         seed_description=str(seed.raw_payload),
     )
