@@ -30,14 +30,14 @@ This document tracks the fixes for the issues identified during the core agent l
     - **Fix:** Create a test that manually alters a ledger entry and asserts `verify_chain()` failure.
     - **Validation:** Successful execution of the new integrity test.
 
-- [ ] **TEST-02: Expand Agent Edge-Case Testing**
+- [x] **TEST-02: Expand Agent Edge-Case Testing** *(Completed 2026-05-08 in commit `ba8ee5e`)*
     - **Problem:** General lack of "empty state" or "extreme input" tests for agents.
-    - **Fix:** Add boundary tests for `Alpha`, `Tracker`, and `Closer` (e.g., 0 entities, 100+ entities).
+    - **Fix:** Added boundary tests for `Alpha`, `Tracker`, and `Closer` (0 entities, 100+ entities, empty payloads, unicode, oversized data).
     - **Validation:** Pytest coverage report increase.
 
 ---
 **Status:**
 - Total items: 6
-- Completed: 5
+- Completed: 6
 - In Progress: 0
-- Remaining: 1
+- Remaining: 0
