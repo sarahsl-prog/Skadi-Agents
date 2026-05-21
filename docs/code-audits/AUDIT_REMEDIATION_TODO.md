@@ -427,10 +427,10 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-61, MED-62, LOW-3, LOW-32  
 **Status:** Unvalidated content; datetime serialization; shadowed hash; non-deterministic default
 
-- [ ] `ledger.py:63-94`: Validate `content` against `EvidenceRef` before insertion
-- [ ] `persistence.py:75,155`: Use asyncpg JSONB or custom encoder for datetime
-- [ ] `evidence.py:27`: Rename `EvidenceRef.hash` to avoid shadowing built-in
-- [ ] `evidence.py:23-25`: Make timestamp deterministic
+- [x] MED-61: ledger holds heterogeneous content (evidence/timeline_event/verdict); fix is in `replay_ledger` — it now filters `entry_type='evidence'` instead of validating every row as EvidenceRef (which crashed on timeline rows). Insert stays flexible by design.
+- [x] MED-62: `persistence.py` uses `model_dump(mode="json")`; `ledger.insert_ledger_entry` uses `json.dumps(content, default=str)` for datetime safety.
+- [x] LOW-3: `EvidenceRef.hash` no longer exists (field is `content_hash`) — shadow resolved.
+- [ ] `evidence.py:23-25`: Make timestamp deterministic (LOW-32 — left; default_factory is acceptable for capture time)
 
 ### 10.2 Branch/Case State — `src/wolfpack/schemas/branch.py`, `case_state.py`
 **Issues:** MED-64, LOW-13, LOW-14  
