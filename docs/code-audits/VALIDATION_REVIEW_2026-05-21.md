@@ -29,7 +29,9 @@ fixed on this branch:
 
 **P3 progress (this branch):** Flanker `max_re_checks` now configurable (`BranchBudgetConfig.max_re_checks` + `build_hunt_graph` param); learning-worker case-level `evidence_refs` aggregation bug fixed (was only keeping the last ref per branch, with a `NameError` risk on empty branches); line-based file adapters (cloudtrail/dns/firewall/proxy/zeek_suricata) now read via `asyncio.to_thread`. Verified already-done from prior remediation: MED-21 (terminal failure status), MED-53 (confidence clamp), MED-58/59 (eval key guard + Jaccard matching), LOW-3 (`content_hash` rename), LOW-8 (policy `register` validation).
 
-**Still open (P3 / coverage):** learning salt strategy (MED-56/57) and KEK re-wrap (MED-38) — both need a design decision; `windows_eventlog` sync XML parse; schema polish (MED-61/62, entity/seed ids); LLM `hosted` flag (LOW-51); and the untested-module backfill in §4.
+**P3 follow-up (this branch):** MED-56/57 done — the learning worker now pseudonymises entities with the per-case salt from `wolfpack.pii_salts` (16-char hash); the source-constant salt is only a fallback. MED-38 done — `dek.rewrap_deks_for_kek` rotates the KEK and atomically re-wraps every active DEK (old-KEK destruction remains an operator/KMS step); covered by new unit tests.
+
+**Still open (P3 / coverage):** `windows_eventlog` sync XML parse; schema polish (MED-61 ledger content validation, MED-62 datetime JSON, entity/seed ids); LLM `hosted` flag (LOW-51); and the untested-module backfill in §4.
 
 ---
 

@@ -476,8 +476,8 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-56, MED-57  
 **Status:** Hardcoded salt; truncated hash
 
-- [ ] Lines 33-35: Use per-case PII salt from `wolfpack.pii_salts`
-- [ ] Line 34: Use 16+ hex characters
+- [x] Lines 33-35: Use per-case PII salt from `wolfpack.pii_salts` (worker fetches `get_pii_salt` and passes it; constant is now only a fallback)
+- [x] Line 34: Use 16+ hex characters (already `[:16]`)
 
 ### 11.3 Eval Harness — `src/wolfpack/eval/harness.py`
 **Issues:** MED-58, MED-59  
@@ -495,7 +495,7 @@ These bugs cause crashes or completely broken functionality.
 **Status:** DONE
 
 - [x] Lines 42,68: Include `kek_id` as AAD
-- [ ] Lines 71-77: Re-wrap DEKs on KEK rotation (architectural gap; KMS has no DB access)
+- [x] Lines 71-77: Re-wrap DEKs on KEK rotation — `dek.rewrap_deks_for_kek(pool, kms, old_kek_id)` rotates the KEK and atomically re-wraps every active DEK in a transaction (DB orchestration lives in dek.py since the KMS has no DB access). Old-KEK destruction remains an operator/KMS procedure.
 - [x] Line 87: Use random UUID-based kek_id instead of key hex
 
 ### 12.2 DEK — `src/wolfpack/crypto/dek.py`
@@ -652,7 +652,7 @@ Add tests for:
 | 8 | Medium Observability | 4 | ✅ Done |
 | 9 | Medium RAG/Adapters | 11 | ✅ Done |
 | 10 | Medium Schemas | 5 | ⬜ Deferred (blast radius) |
-| 11 | Medium Learning/Eval | 4 | ⬜ Partial — MED-56/57 (learning salt) still open; MED-21/22/58/59 done |
+| 11 | Medium Learning/Eval | 4 | ✅ Done — MED-21/22/56/57/58/59 all addressed |
 | 12 | Medium Crypto/Config | 4 | ✅ Done |
 | 13 | Medium LLM/Observability | 3 | ⬜ Deferred |
 | 14 | Low Severity | 52 | ✅ Done |

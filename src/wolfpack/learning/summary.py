@@ -29,6 +29,9 @@ class EntitySummary(BaseModel):
 
     @classmethod
     def from_entity(cls, entity: Entity, salt: str | None = None) -> EntitySummary:
+        # Production callers (the learning worker) pass the per-case salt from
+        # wolfpack.pii_salts. The constant below is only a deployment-wide
+        # fallback for callers without a per-case salt (e.g. ad-hoc tooling).
         if salt is None:
             salt = "wolfpack-learning"
         digest = hashlib.sha256(f"{salt}:{entity.value}".encode()).hexdigest()[:16]

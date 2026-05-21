@@ -150,8 +150,13 @@ class LearningQueueWorker:
             await self._set_failure_status(str(entry["id"]), "low_confidence")
             return
 
-        # 4. Format summary
-        summary = format_case_summary(case_state, verdict=verdict)
+        # 4. Format summary — pseudonymise entities with the per-case salt
+        # (same salt used by the live PII pipeline) instead of a hardcoded one.
+        from wolfpack.schemas.pii import get_pii_salt
+
+        salt_bytes = await get_pii_salt(self._pool, case_id)
+        salt = salt_bytes.hex() if salt_bytes is not None else None
+        summary = format_case_summary(case_state, verdict=verdict, salt=salt)
 
         # 5. Ingest into case-history
         if self._pipeline is not None:
