@@ -82,11 +82,11 @@ async def create_branch(
         await persistence.create_branch(branch)
     except Exception:
         if budget is not None and not branches_so_far:
-            budget.release(case_id, branches=1)
+            await budget.release(case_id, branches=1)
         return None
 
     if budget is not None and branches_so_far:
-        budget.consume(case_id, branches=1)
+        await budget.consume(case_id, branches=1)
 
     if nats_client is not None and nats_client.connected:
         # Include a sanitized hypothesis summary so the audit trail

@@ -34,6 +34,8 @@
     "source=uv-cache,target=/home/devuser/.cache/uv,type=volume",
     // Persistent VS Code extensions
     "source=vscode-ext-cache,target=/home/devuser/.vscode-server/extensions,type=volume"
+    // Mount the docker socket into the devcontainer
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
 
   // ── Environment ────────────────────────────────────────────────────────
