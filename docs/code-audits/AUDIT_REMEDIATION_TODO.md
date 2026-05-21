@@ -604,16 +604,16 @@ These bugs cause crashes or completely broken functionality.
 ### 16.1 Missing Test Files
 Create dedicated test files for:
 - [ ] `observability/logfire.py`
-- [ ] `observability/alerts.py` (individual alert classes)
-- [ ] `crypto/kms.py`
-- [ ] `api/auth.py`
+- [x] `observability/alerts.py` — `tests/unit/test_alerts.py` (incl. MED-40/41 regressions)
+- [x] `crypto/kms.py` / `software_kms.py` — `tests/unit/test_software_kms.py`, `test_dek_rewrap.py`
+- [x] `api/auth.py` — `tests/unit/test_auth.py`
 - [ ] `api/routes/ws.py`
-- [ ] `api/routes/cases.py`, `review.py`, `breakglass.py` (unit tests)
-- [ ] `processing/breakglass.py`
+- [ ] `api/routes/cases.py`, `review.py` (unit tests; currently mocked integration only)
+- [x] `processing/breakglass.py` + `PIICache` — `tests/unit/test_pii_cache.py`
 - [ ] `learning/worker.py` (error handling)
 - [ ] `adapters/windows_eventlog.py`
 - [ ] `adapters/okta.py`, `crowdstrike.py` (with mocking)
-- [ ] `config/validators.py`
+- [x] `config/validators.py` — empty placeholder; no test needed
 
 ### 16.2 Test Fixes
 - [x] `test_closer.py:44`: Fix `Confidence.PLUSIBLE` → `Confidence.PLAUSIBLE`

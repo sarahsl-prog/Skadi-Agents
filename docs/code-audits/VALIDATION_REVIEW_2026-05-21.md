@@ -31,7 +31,11 @@ fixed on this branch:
 
 **P3 follow-up (this branch):** MED-56/57 done — the learning worker now pseudonymises entities with the per-case salt from `wolfpack.pii_salts` (16-char hash); the source-constant salt is only a fallback. MED-38 done — `dek.rewrap_deks_for_kek` rotates the KEK and atomically re-wraps every active DEK (old-KEK destruction remains an operator/KMS step); covered by new unit tests.
 
-**Still open (P3 / coverage):** `windows_eventlog` sync XML parse; schema polish (MED-61 ledger content validation, MED-62 datetime JSON, entity/seed ids); LLM `hosted` flag (LOW-51); and the untested-module backfill in §4.
+**Schema polish (this branch):** MED-61 fixed (`replay_ledger` filters `entry_type='evidence'` rather than validating heterogeneous rows); MED-62 fixed (`model_dump(mode="json")` + `json.dumps(default=str)`); LOW-3 already resolved (`content_hash`). Skipped with rationale: LOW-51 (flag already drives airgapped gating) and LOW-4/5 (entity/seed ids — no consumer, YAGNI).
+
+**P4 coverage (this branch):** added unit tests for `api/auth.py`, `crypto/software_kms.py` (+ `dek.rewrap_deks_for_kek`), `observability/alerts.py` (MED-40/41 regressions), and `processing/breakglass.py`/`PIICache`. Suite: 355 passed / 8 skipped.
+
+**Still open:** `windows_eventlog` sync XML parse; route unit tests (`cases`/`review`/`ws`); `learning/worker` error-path tests; `adapters/okta`/`crowdstrike` mocked tests; `observability/logfire`.
 
 ---
 
