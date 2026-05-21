@@ -5,6 +5,7 @@ Parses Zeek JSON logs (conn, dns, http, ssl, files) and Suricata EVE JSON.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,7 +37,7 @@ class ZeekSuricataSource(TelemetrySource):
         if not path.exists():
             return events
 
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
         for line in text.splitlines():
             line = line.strip()
             if not line:

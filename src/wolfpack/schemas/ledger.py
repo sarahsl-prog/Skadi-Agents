@@ -32,7 +32,12 @@ async def verify_chain(conn: asyncpg.Connection, case_id: str) -> tuple[bool, in
 
 
 async def replay_ledger(conn: asyncpg.Connection, case_id: str) -> list[EvidenceRef]:
-    """Fetch and return all ledger entries for a case, validating chain integrity.
+    """Fetch and return a case's *evidence* ledger entries, validating chain integrity.
+
+    The ledger holds heterogeneous rows (``evidence``, ``timeline_event``,
+    ``verdict``, ...). Integrity is verified across the whole chain, but only
+    rows with ``entry_type = 'evidence'`` are EvidenceRef-shaped, so only those
+    are validated and returned here.
 
     Raises:
         LedgerIntegrityError: If the hash chain is broken or tampered.
@@ -42,7 +47,8 @@ async def replay_ledger(conn: asyncpg.Connection, case_id: str) -> list[Evidence
         raise LedgerIntegrityError(f"Ledger chain broken for case {case_id} at entry {broken_at}")
 
     rows = await conn.fetch(
-        "SELECT content FROM wolfpack.evidence_ledger " "WHERE case_id = $1 ORDER BY seq ASC",
+        "SELECT content FROM wolfpack.evidence_ledger "
+        "WHERE case_id = $1 AND entry_type = 'evidence' ORDER BY seq ASC",
         case_id,
     )
     return [
@@ -79,7 +85,7 @@ async def insert_ledger_entry(
         case_id,
         branch_id,
         entry_type,
-        json.dumps(content),
+        json.dumps(content, default=str),
         agent_run_id,
     )
     if row is None:

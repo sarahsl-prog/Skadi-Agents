@@ -13,16 +13,14 @@ import pytest
 from pydantic_ai.models.test import TestModel
 
 from wolfpack.agents.alpha import AlphaDispatcher
-from wolfpack.agents.closer import CLOSER_TOOL_ALLOWLIST, _build_closer_agent, run_closer
+from wolfpack.agents.closer import run_closer
 from wolfpack.agents.tracker import TrackerDeps, run_tracker
 from wolfpack.schemas.agents.alpha import AlphaOutput
 from wolfpack.schemas.case_state import CaseState
 from wolfpack.schemas.confidence import Confidence, calibrate
-from wolfpack.schemas.entity import Entity
 from wolfpack.schemas.evidence import EvidenceRef
 from wolfpack.schemas.hypothesis import Hypothesis
 from wolfpack.schemas.seed import Seed
-
 
 # --------------------------------------------------------------------------- #
 # Alpha Dispatcher edge cases

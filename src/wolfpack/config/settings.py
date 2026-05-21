@@ -107,12 +107,16 @@ class MLflowConfig(BaseModel):
 class BranchBudgetConfig(BaseModel):
     max_depth: int = 3
     max_branches_per_case: int = 10
+    # Circuit-breaker for the Tracker<->Flanker re-check loop: the maximum
+    # number of times a case may bounce back to Flanker for additional
+    # pivots before it is forced on to Closer.
+    max_re_checks: int = 2
     # NOTE: token_budget_per_branch and tool_budget_per_branch are
     # reserved for V2. They require LLM-provider instrumentation that
     # is not yet wired into the graph nodes. Only depth and branch
     # count are enforced in V1.
 
-    @field_validator("max_depth", "max_branches_per_case")
+    @field_validator("max_depth", "max_branches_per_case", "max_re_checks")
     @classmethod
     def _non_negative(cls, v: int) -> int:
         if v < 0:

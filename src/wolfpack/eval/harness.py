@@ -30,10 +30,20 @@ class GoldenSet:
 
     @property
     def seed(self) -> Seed:
+        if "seed" not in self.data:
+            raise ValueError(
+                f"Golden set {self.path.name!r} is missing required 'seed' field "
+                "(is this a replay set in the wrong directory?)"
+            )
         return Seed.model_validate(self.data["seed"])
 
     @property
     def expected_confidence(self) -> Confidence:
+        if "expected_confidence" not in self.data:
+            raise ValueError(
+                f"Golden set {self.path.name!r} is missing required "
+                "'expected_confidence' field"
+            )
         return Confidence(int(self.data["expected_confidence"]))
 
     @property

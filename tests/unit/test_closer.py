@@ -44,7 +44,10 @@ async def test_closer_produces_verdict_packet() -> None:
         evidence_refs=[EvidenceRef(source_type="stub", source_id="ev-001")],
     )
 
-    result = await run_closer(state, model=TestModel())
+    # call_tools=[] skips tool calls: TestModel synthesizes placeholder tool
+    # args that (correctly) fail the adapter's entity_type validation. This
+    # test only exercises verdict-packet assembly, not tool execution.
+    result = await run_closer(state, model=TestModel(call_tools=[]))
     assert "verdict_decision" in result
     assert result["status"] == "review"
     assert "verdict_packet" in result

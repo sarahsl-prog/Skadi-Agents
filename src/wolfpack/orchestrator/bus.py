@@ -21,10 +21,10 @@ _LOGGER = logging.getLogger(__name__)
 import nats
 from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig
+from opentelemetry import context
 
 from wolfpack.config.settings import NATSConfig
 from wolfpack.observability.nats_propagation import (
-    context,
     extract_nats_headers,
     inject_nats_headers,
 )

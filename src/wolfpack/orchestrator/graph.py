@@ -16,7 +16,7 @@ invoked with a ``CaseState`` dict.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
 from langgraph.graph import END, START, StateGraph
 
@@ -38,17 +38,21 @@ def _route_after_tracker(state: CaseState) -> str:
     return "closer"
 
 
-def _route_after_flanker(state: CaseState) -> str:
-    """Route Flanker output based on significance and re-check count.
+def _build_flanker_router(max_re_checks: int) -> Callable[[CaseState], str]:
+    """Build the post-Flanker router with a configurable re-check budget.
 
     If Flanker produced significant new findings and we have not exhausted
-    the re-check budget, loop back to Tracker for reassessment.
-    Otherwise proceed to Closer.
+    the re-check budget (``max_re_checks``), loop back to Tracker for
+    reassessment.  Otherwise proceed to Closer.  This is the circuit-breaker
+    that bounds the Tracker<->Flanker loop.
     """
-    max_recheck = 2
-    if state.significant_findings and state.re_check_count < max_recheck:
-        return "tracker"
-    return "closer"
+
+    def _route(state: CaseState) -> str:
+        if state.significant_findings and state.re_check_count < max_re_checks:
+            return "tracker"
+        return "closer"
+
+    return _route
 
 
 def _route_after_review(state: CaseState) -> str:
@@ -111,16 +115,17 @@ def _wrap_with_nats(
             )
 
     async def _async_wrapped(state: CaseState) -> dict[str, Any]:
-        result = await node(state)
+        async_node = cast("Callable[[CaseState], Awaitable[dict[str, Any]]]", node)
+        result = await async_node(state)
         await _publish_safe(subject, result)
-        return result  # type: ignore[return-value]
+        return result
 
     async def _sync_wrapped(state: CaseState) -> dict[str, Any]:
-        """Now converted to async to avoid race conditions with NATS publishing."""
-        # In a real scenario, if the node is truly sync, we wrap it here
-        result = node(state)
+        """Async wrapper around a sync node so NATS publishing can be awaited."""
+        sync_node = cast("Callable[[CaseState], dict[str, Any]]", node)
+        result = sync_node(state)
         await _publish_safe(subject, result)
-        return result  # type: ignore[return-value]
+        return result
 
     return _async_wrapped if asyncio.iscoroutinefunction(node) else _sync_wrapped
 
@@ -135,6 +140,7 @@ def build_hunt_graph(
     review: NodeFn | None = None,
     scribe: NodeFn | None = None,
     nats_client: Any | None = None,
+    max_re_checks: int = 2,
 ) -> Any:
     """Compile the hunt graph.
 
@@ -235,7 +241,7 @@ def build_hunt_graph(
     builder.add_edge("flanker", "scribe_after_flanker")
     builder.add_conditional_edges(
         "scribe_after_flanker",
-        _route_after_flanker,
+        _build_flanker_router(max_re_checks),
         {
             "tracker": "tracker",
             "closer": "closer",

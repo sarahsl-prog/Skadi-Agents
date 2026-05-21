@@ -7,6 +7,38 @@
 
 ---
 
+## 0. Remediation Status (updated 2026-05-21, same branch)
+
+The findings below were the *as-found* state. The following have since been
+fixed on this branch:
+
+| Item | Status | Notes |
+|------|--------|-------|
+| P0-1 OTel baggage propagation | ✅ Fixed | `set_baggage` results now chained + attached in `baggage.py`/`nats_propagation.py`; also fixed a latent `json.dumps(mappingproxy)` crash the fix exposed. |
+| P0-2 Flanker `Settings()` coupling | ✅ Fixed | `_build_flanker_agent` falls back to default-deny flags when full config is absent. |
+| P0-3 Tool `ValueError` → `ModelRetry` | ✅ Fixed | Adapter tool arg validation now raises `ModelRetry`; Closer RAG tools no longer assume a `RAGDeps` shape. |
+| P0-4 Eval harness `KeyError` | ✅ Fixed | Replay fixtures moved to `tests/eval/replay_sets/`; `GoldenSet` raises a clear error on missing keys. |
+| P1-1 `mypy src` | ✅ Green | 0 errors (was 14). |
+| P1-2 Stale tests | ✅ Fixed | PII (12-char tokens / salt-first depseudonymize), verdict casing, `Seed.type`, `AsyncMock` updated. |
+| P1-3 `ruff check` | ✅ Green | 0 errors (was 7). |
+| P2-2 `architecture.md`/`configuration.md`/`deployment.md` stale schema prose | ✅ Fixed | `pii_store`/`payload_json`/`entry_hash` → `pii_salts`/`pii_mappings`/`content`/`content_hash`/`seq`. |
+| P2-3 TODO summary contradiction | ✅ Fixed | Priority 11 row reconciled to "Partial". |
+| P2-4 Committed `mlflow.db`/`mlruns/` | ✅ Fixed | Untracked and gitignored. |
+
+**Quality gates now (this branch):** `pytest tests/unit tests/security` → 329 passed, 8 skipped; `mypy src` → clean; `ruff check src tests` → clean. Integration tests remain Docker-gated and unexecuted here.
+
+**P3 progress (this branch):** Flanker `max_re_checks` now configurable (`BranchBudgetConfig.max_re_checks` + `build_hunt_graph` param); learning-worker case-level `evidence_refs` aggregation bug fixed (was only keeping the last ref per branch, with a `NameError` risk on empty branches); line-based file adapters (cloudtrail/dns/firewall/proxy/zeek_suricata) now read via `asyncio.to_thread`. Verified already-done from prior remediation: MED-21 (terminal failure status), MED-53 (confidence clamp), MED-58/59 (eval key guard + Jaccard matching), LOW-3 (`content_hash` rename), LOW-8 (policy `register` validation).
+
+**P3 follow-up (this branch):** MED-56/57 done — the learning worker now pseudonymises entities with the per-case salt from `wolfpack.pii_salts` (16-char hash); the source-constant salt is only a fallback. MED-38 done — `dek.rewrap_deks_for_kek` rotates the KEK and atomically re-wraps every active DEK (old-KEK destruction remains an operator/KMS step); covered by new unit tests.
+
+**Schema polish (this branch):** MED-61 fixed (`replay_ledger` filters `entry_type='evidence'` rather than validating heterogeneous rows); MED-62 fixed (`model_dump(mode="json")` + `json.dumps(default=str)`); LOW-3 already resolved (`content_hash`). Skipped with rationale: LOW-51 (flag already drives airgapped gating) and LOW-4/5 (entity/seed ids — no consumer, YAGNI).
+
+**P4 coverage (this branch):** added unit tests for `api/auth.py`, `crypto/software_kms.py` (+ `dek.rewrap_deks_for_kek`), `observability/alerts.py` (MED-40/41 regressions), and `processing/breakglass.py`/`PIICache`. Suite: 355 passed / 8 skipped.
+
+**Still open:** `windows_eventlog` sync XML parse; route unit tests (`cases`/`review`/`ws`); `learning/worker` error-path tests; `adapters/okta`/`crowdstrike` mocked tests; `observability/logfire`.
+
+---
+
 ## 1. Executive Summary
 
 The project claims **all 8 phases complete and "V1 release ready"** (`RELEASE_READINESS.md`, `PROJECT_PLAN.md` Phase 8 retro). The architecture is broad and largely built out: 97 source modules covering orchestrator, agents, RAG, adapters, crypto, PII, observability, API, learning, and eval. The previous audit (`CURRENT_AUDIT_REPORT.md`, ~120 issues) drove a large remediation pass (`AUDIT_REMEDIATION_TODO.md`) that fixed most critical/high items.

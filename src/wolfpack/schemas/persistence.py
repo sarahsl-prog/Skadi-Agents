@@ -104,7 +104,7 @@ class CasePersistence:
                 VALUES ($1, $2, $3, $4, $5, $6)
                 """,
                 case.case_id,
-                json.dumps(case.seed.model_dump()),
+                json.dumps(case.seed.model_dump(mode="json")),
                 case.status,
                 case.version,
                 case.created_at,
@@ -181,7 +181,7 @@ class CasePersistence:
                 branch.branch_id,
                 branch.case_id,
                 branch.parent_branch_id,
-                json.dumps(branch.spec.model_dump()),
+                json.dumps(branch.spec.model_dump(mode="json")),
                 branch.spec.depth,
                 branch.status,
                 branch.version,

@@ -74,7 +74,7 @@ class TestReviewNode:
         state = CaseState(
             case_id="case-ctx",
             seed=Seed(type="ioc", raw_payload={}),
-            verdict_decision="malicious",
+            verdict_decision="MALICIOUS",
             overall_confidence=Confidence.HIGH_FIDELITY,
         )
         config = {"configurable": {"thread_id": "rev-7"}}
@@ -82,5 +82,5 @@ class TestReviewNode:
         interrupts = result["__interrupt__"]
         assert len(interrupts) == 1
         assert interrupts[0].value["case_id"] == "case-ctx"
-        assert interrupts[0].value["verdict"] == "malicious"
+        assert interrupts[0].value["verdict"] == "MALICIOUS"
         assert interrupts[0].value["confidence"] == Confidence.HIGH_FIDELITY

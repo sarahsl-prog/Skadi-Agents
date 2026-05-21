@@ -221,7 +221,7 @@ These bugs cause crashes or completely broken functionality.
 **Status:** No-op filtering; no circuit-breaker; unwired deps
 
 - [x] Lines 211-215: Collect and filter case-level hypotheses properly
-- [ ] Line 279: Add `max_re_checks` config; enforce in graph router
+- [x] Line 279: Add `max_re_checks` config; enforce in graph router (BranchBudgetConfig.max_re_checks + build_hunt_graph param)
 - [ ] Lines 33-44: Wire `FlankerDeps.rag` and `adapters` to tools
 - [x] Line 131-134: Don't shadow feature flag parameter
 - [x] Line 233: Fix branch_id fallback to reference actual branch
@@ -250,7 +250,7 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** LOW-8  
 **Status:** No validation on register
 
-- [ ] Lines 30,67-73: Validate `"check"` is callable in `register()`
+- [x] Lines 30,67-73: Validate `"check"` is callable in `register()` (raises TypeError; required-key check too)
 
 ---
 
@@ -388,9 +388,10 @@ These bugs cause crashes or completely broken functionality.
 
 ### 9.8 File Adapters — All `src/wolfpack/adapters/*.py`
 **Issues:** MED-50, LOW-40  
-**Status:** Partial (path validation done; asyncio.to_thread deferred)
+**Status:** Partial (path validation done; line-based adapters now use asyncio.to_thread)
 
-- [ ] All adapters: Use `asyncio.to_thread()` or `aiofiles` for file I/O
+- [x] Line-based adapters (syslog/cloudtrail/dns/firewall/proxy/zeek_suricata): `read_text` via `asyncio.to_thread`
+- [ ] `windows_eventlog._parse_xml_fallback`: sync `ET.parse` (would require making the helper async)
 - [x] Add path traversal validation on `log_path`/`evtx_path`
 
 ### 9.9 Adapter Tools — `src/wolfpack/adapters/tools.py`
@@ -426,10 +427,10 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-61, MED-62, LOW-3, LOW-32  
 **Status:** Unvalidated content; datetime serialization; shadowed hash; non-deterministic default
 
-- [ ] `ledger.py:63-94`: Validate `content` against `EvidenceRef` before insertion
-- [ ] `persistence.py:75,155`: Use asyncpg JSONB or custom encoder for datetime
-- [ ] `evidence.py:27`: Rename `EvidenceRef.hash` to avoid shadowing built-in
-- [ ] `evidence.py:23-25`: Make timestamp deterministic
+- [x] MED-61: ledger holds heterogeneous content (evidence/timeline_event/verdict); fix is in `replay_ledger` — it now filters `entry_type='evidence'` instead of validating every row as EvidenceRef (which crashed on timeline rows). Insert stays flexible by design.
+- [x] MED-62: `persistence.py` uses `model_dump(mode="json")`; `ledger.insert_ledger_entry` uses `json.dumps(content, default=str)` for datetime safety.
+- [x] LOW-3: `EvidenceRef.hash` no longer exists (field is `content_hash`) — shadow resolved.
+- [ ] `evidence.py:23-25`: Make timestamp deterministic (LOW-32 — left; default_factory is acceptable for capture time)
 
 ### 10.2 Branch/Case State — `src/wolfpack/schemas/branch.py`, `case_state.py`
 **Issues:** MED-64, LOW-13, LOW-14  
@@ -450,7 +451,7 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-53, MED-65  
 **Status:** Docstring contradiction; re-entrant call
 
-- [ ] Line 46: Fix docstring or logic to never downgrade
+- [x] Line 46: Fix docstring or logic to never downgrade (clamped via `max(int(confidence), ...)`)
 - [ ] Lines 26-29: Clean up `_missing_` pattern
 
 ### 10.5 Persistence Pool — `src/wolfpack/schemas/persistence.py`
@@ -468,22 +469,22 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-21, MED-22  
 **Status:** Permanent failure on low confidence; missing evidence aggregation
 
-- [ ] Lines 137-142: Handle low-confidence with warning; set failure status
-- [ ] Lines 186-298: Aggregate branch evidence into case-level `evidence_refs`
+- [x] Lines 137-142: Handle low-confidence with warning; set failure status (`_set_failure_status` sets terminal `last_error`/`ingested_at`)
+- [x] Lines 186-298: Aggregate branch evidence into case-level `evidence_refs` (fixed loop-scope bug that only kept the last ref per branch)
 
 ### 11.2 Learning Summary — `src/wolfpack/learning/summary.py`
 **Issues:** MED-56, MED-57  
 **Status:** Hardcoded salt; truncated hash
 
-- [ ] Lines 33-35: Use per-case PII salt from `wolfpack.pii_salts`
-- [ ] Line 34: Use 16+ hex characters
+- [x] Lines 33-35: Use per-case PII salt from `wolfpack.pii_salts` (worker fetches `get_pii_salt` and passes it; constant is now only a fallback)
+- [x] Line 34: Use 16+ hex characters (already `[:16]`)
 
 ### 11.3 Eval Harness — `src/wolfpack/eval/harness.py`
 **Issues:** MED-58, MED-59  
 **Status:** KeyError risk; lenient matching
 
-- [ ] Line 29: Use `.get("name", self.path.stem)`
-- [ ] Lines 79-87: Use token overlap or embedding similarity
+- [x] Line 29: Use `.get("name", self.path.stem)`
+- [x] Lines 79-87: Use token overlap or embedding similarity (Jaccard token overlap implemented)
 
 ---
 
@@ -494,7 +495,7 @@ These bugs cause crashes or completely broken functionality.
 **Status:** DONE
 
 - [x] Lines 42,68: Include `kek_id` as AAD
-- [ ] Lines 71-77: Re-wrap DEKs on KEK rotation (architectural gap; KMS has no DB access)
+- [x] Lines 71-77: Re-wrap DEKs on KEK rotation — `dek.rewrap_deks_for_kek(pool, kms, old_kek_id)` rotates the KEK and atomically re-wraps every active DEK in a transaction (DB orchestration lives in dek.py since the KMS has no DB access). Old-KEK destruction remains an operator/KMS procedure.
 - [x] Line 87: Use random UUID-based kek_id instead of key hex
 
 ### 12.2 DEK — `src/wolfpack/crypto/dek.py`
@@ -603,16 +604,16 @@ These bugs cause crashes or completely broken functionality.
 ### 16.1 Missing Test Files
 Create dedicated test files for:
 - [ ] `observability/logfire.py`
-- [ ] `observability/alerts.py` (individual alert classes)
-- [ ] `crypto/kms.py`
-- [ ] `api/auth.py`
+- [x] `observability/alerts.py` — `tests/unit/test_alerts.py` (incl. MED-40/41 regressions)
+- [x] `crypto/kms.py` / `software_kms.py` — `tests/unit/test_software_kms.py`, `test_dek_rewrap.py`
+- [x] `api/auth.py` — `tests/unit/test_auth.py`
 - [ ] `api/routes/ws.py`
-- [ ] `api/routes/cases.py`, `review.py`, `breakglass.py` (unit tests)
-- [ ] `processing/breakglass.py`
+- [ ] `api/routes/cases.py`, `review.py` (unit tests; currently mocked integration only)
+- [x] `processing/breakglass.py` + `PIICache` — `tests/unit/test_pii_cache.py`
 - [ ] `learning/worker.py` (error handling)
 - [ ] `adapters/windows_eventlog.py`
 - [ ] `adapters/okta.py`, `crowdstrike.py` (with mocking)
-- [ ] `config/validators.py`
+- [x] `config/validators.py` — empty placeholder; no test needed
 
 ### 16.2 Test Fixes
 - [x] `test_closer.py:44`: Fix `Confidence.PLUSIBLE` → `Confidence.PLAUSIBLE`
@@ -651,7 +652,7 @@ Add tests for:
 | 8 | Medium Observability | 4 | ✅ Done |
 | 9 | Medium RAG/Adapters | 11 | ✅ Done |
 | 10 | Medium Schemas | 5 | ⬜ Deferred (blast radius) |
-| 11 | Medium Learning/Eval | 4 | ✅ Done |
+| 11 | Medium Learning/Eval | 4 | ✅ Done — MED-21/22/56/57/58/59 all addressed |
 | 12 | Medium Crypto/Config | 4 | ✅ Done |
 | 13 | Medium LLM/Observability | 3 | ⬜ Deferred |
 | 14 | Low Severity | 52 | ✅ Done |

@@ -101,7 +101,7 @@ Span: wolfpack.case (case_id)
   │     └─ Event: branch_created (branch_id, depth)
   ├─ Span: wolfpack.node.closer
   └─ Span: wolfpack.node.scribe
-        └─ Event: ledger_write (sequence, entry_hash)
+        └─ Event: ledger_write (seq, content_hash)
 ```
 
 ### Baggage Propagation
@@ -126,14 +126,14 @@ Span: wolfpack.case (case_id)
 
 1. Telemetry arrives containing identifiers (IPs, usernames, emails).
 2. NER strips free-text identifiers before context assembly.
-3. Deterministic pseudonymization replaces structured identifiers with a per-case salt + hash.
-4. Pseudonyms are stored in `pii_store`; original values are **not** stored.
+3. Deterministic pseudonymization replaces structured identifiers with a per-case salt + hash; the per-case salt lives in `pii_salts`.
+4. Token→original mappings are stored in `pii_mappings` with `original_value` encrypted (AES-256-GCM) under a per-case key, so a DB read alone does not expose raw PII.
 5. Analyst can request break-glass rehydration (logged to `breakglass_audit`).
 
 ### Break-Glass Flow
 
 1. Analyst clicks "Show raw" in the Analyst Console.
-2. System looks up `pii_store` salt for the case and field.
+2. System looks up the per-case salt in `pii_salts` and the encrypted mapping in `pii_mappings`, then decrypts the original value.
 3. Raw value is rehydrated and displayed **once**.
 4. Invocation is written to `breakglass_audit` with `analyst_id`, `field_accessed`, `timestamp`, `justification`.
 
@@ -149,9 +149,9 @@ Span: wolfpack.case (case_id)
 ### Hash-Chained Ledger
 
 Each `evidence_ledger` row stores:
-- `sequence` (monotonic per case)
-- `payload_json` (the event)
-- `prev_hash` (SHA-256 of previous row)
-- `entry_hash` (SHA-256 of this row’s content)
+- `seq` (monotonic per case, assigned by the insert trigger)
+- `content` (the event payload, JSONB)
+- `prev_hash` (SHA-256 of the previous row’s content hash)
+- `content_hash` (SHA-256 of this row’s content)
 
-Tampering any row breaks `verify_chain()`. The function is exposed as `wolfpack.verify_chain(case_id)`.
+Tampering any row breaks the chain. Integrity is checked by the SQL function `wolfpack.verify_chain(case_id)` and the Python helper `wolfpack.schemas.ledger.verify_chain()`.

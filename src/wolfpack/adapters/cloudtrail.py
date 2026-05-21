@@ -5,6 +5,7 @@ Parses CloudTrail logs from S3 event delivery or API response JSON.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
@@ -36,7 +37,7 @@ class CloudTrailSource(TelemetrySource):
         if not path.exists():
             return events
 
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
 
         # CloudTrail S3 delivery: each file is a JSON object with "Records" array
         try:

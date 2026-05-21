@@ -21,7 +21,9 @@ def inject_nats_headers() -> dict[str, str]:
     # JSON-encode baggage values for NATS header transport
     all_baggage = baggage.get_all()
     if all_baggage:
-        carrier["wolfpack.baggage"] = json.dumps(all_baggage)
+        # ``get_all`` returns an immutable ``mappingproxy``; convert to a plain
+        # dict so it is JSON-serializable for the NATS header.
+        carrier["wolfpack.baggage"] = json.dumps(dict(all_baggage))
     return carrier
 
 
@@ -38,8 +40,10 @@ def extract_nats_headers(headers: dict[str, str] | None) -> context.Context:
     if raw_baggage:
         try:
             parsed = json.loads(raw_baggage)
+            # ``set_baggage`` returns a new context; fold each entry into the
+            # context we return so the caller's ``context.attach`` carries it.
             for key, value in parsed.items():
-                baggage.set_baggage(key, value)
+                ctx = baggage.set_baggage(key, value, context=ctx)
         except json.JSONDecodeError:
             pass
     return ctx
