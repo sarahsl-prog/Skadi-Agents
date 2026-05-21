@@ -114,9 +114,23 @@ def _build_flanker_agent(
 
     # Merge caller-supplied flags with canonical Settings so that
     # callers cannot enable adapters that are disabled in config.
+    from pydantic import ValidationError
+
     from wolfpack.config.settings import Settings
 
-    canonical = Settings().feature_flags
+    try:
+        canonical = Settings().feature_flags
+    except ValidationError:
+        # Settings requires full deployment config (deployment_mode/llm/
+        # postgres). When it is unavailable (tests, partial environments),
+        # fall back to tier-2 adapters disabled. Callers may only *disable*
+        # adapters below, never enable, so this preserves default-deny.
+        canonical = {
+            "adapter_dns": False,
+            "adapter_zeek_suricata": False,
+            "adapter_proxy": False,
+            "adapter_cloudtrail": False,
+        }
     caller_flags = feature_flags or {}
     # A caller may only *disable* an adapter; enabling requires config.
     effective_flags = {

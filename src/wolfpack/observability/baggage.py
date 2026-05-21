@@ -11,8 +11,13 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
+from opentelemetry import context as otel_context
 from opentelemetry.baggage import get_baggage, set_baggage
 from opentelemetry.trace import Span
+
+
+def _as_str(value: object) -> str | None:
+    return value if isinstance(value, str) else None
 
 
 @dataclass(frozen=True)
@@ -34,26 +39,31 @@ def set_case_baggage(
 
     Returns the :class:`CaseBaggage` snapshot that was written.
     """
-    baggage = CaseBaggage(
+    snapshot = CaseBaggage(
         case_id=case_id,
         branch_id=branch_id,
         agent_run_id=agent_run_id,
     )
+    # ``set_baggage`` returns a *new* immutable context rather than mutating
+    # the active one. Chain the writes through ``context=`` and attach the
+    # result so subsequent ``get_case_baggage`` calls in this execution see it.
+    ctx = otel_context.get_current()
     if case_id is not None:
-        set_baggage("wolfpack.case_id", case_id)
+        ctx = set_baggage("wolfpack.case_id", case_id, context=ctx)
     if branch_id is not None:
-        set_baggage("wolfpack.branch_id", branch_id)
+        ctx = set_baggage("wolfpack.branch_id", branch_id, context=ctx)
     if agent_run_id is not None:
-        set_baggage("wolfpack.agent_run_id", agent_run_id)
-    return baggage
+        ctx = set_baggage("wolfpack.agent_run_id", agent_run_id, context=ctx)
+    otel_context.attach(ctx)
+    return snapshot
 
 
 def get_case_baggage() -> CaseBaggage:
     """Read the current case context from OTel baggage."""
     return CaseBaggage(
-        case_id=get_baggage("wolfpack.case_id"),
-        branch_id=get_baggage("wolfpack.branch_id"),
-        agent_run_id=get_baggage("wolfpack.agent_run_id"),
+        case_id=_as_str(get_baggage("wolfpack.case_id")),
+        branch_id=_as_str(get_baggage("wolfpack.branch_id")),
+        agent_run_id=_as_str(get_baggage("wolfpack.agent_run_id")),
     )
 
 

@@ -86,7 +86,7 @@ class TestBranchBudget:
     @pytest.mark.anyio
     async def test_atomic_check_and_consume(self, branch_budget: BranchBudget) -> None:
         # First 10 should succeed atomically
-        for i in range(10):
+        for _ in range(10):
             assert await branch_budget.check_and_consume("case-003", branch_depth=1) is True
         # Next one should fail
         assert await branch_budget.check_and_consume("case-003", branch_depth=1) is False

@@ -651,7 +651,7 @@ Add tests for:
 | 8 | Medium Observability | 4 | ✅ Done |
 | 9 | Medium RAG/Adapters | 11 | ✅ Done |
 | 10 | Medium Schemas | 5 | ⬜ Deferred (blast radius) |
-| 11 | Medium Learning/Eval | 4 | ✅ Done |
+| 11 | Medium Learning/Eval | 4 | ⬜ Partial — MED-21/22/56/57/59 still open (see line items above) |
 | 12 | Medium Crypto/Config | 4 | ✅ Done |
 | 13 | Medium LLM/Observability | 3 | ⬜ Deferred |
 | 14 | Low Severity | 52 | ✅ Done |

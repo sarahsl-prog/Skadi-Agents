@@ -97,7 +97,7 @@ Feature flags are parsed as JSON if the env value is a string.
 PII settings are currently compile-time (no env toggles in V1):
 
 - **NER stripping** — enabled for all free-text fields before agent context assembly
-- **Deterministic pseudonymization** — per-case salt, stored in `pii_store`
+- **Deterministic pseudonymization** — per-case salt in `pii_salts`; token→encrypted-original mappings in `pii_mappings`
 - **Break-glass** — audit-logged, one-time rehydration
 
 ## Alert Thresholds

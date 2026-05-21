@@ -26,6 +26,10 @@ docker-compose.override.yml
 .coverage
 htmlcov/
 
+# MLflow local experiment-tracking artifacts (not source)
+mlflow.db
+mlruns/
+
 # Claude Code session state
 .remember/
 

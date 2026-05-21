@@ -16,7 +16,7 @@ invoked with a ``CaseState`` dict.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
 from langgraph.graph import END, START, StateGraph
 
@@ -111,16 +111,17 @@ def _wrap_with_nats(
             )
 
     async def _async_wrapped(state: CaseState) -> dict[str, Any]:
-        result = await node(state)
+        async_node = cast("Callable[[CaseState], Awaitable[dict[str, Any]]]", node)
+        result = await async_node(state)
         await _publish_safe(subject, result)
-        return result  # type: ignore[return-value]
+        return result
 
     async def _sync_wrapped(state: CaseState) -> dict[str, Any]:
-        """Now converted to async to avoid race conditions with NATS publishing."""
-        # In a real scenario, if the node is truly sync, we wrap it here
-        result = node(state)
+        """Async wrapper around a sync node so NATS publishing can be awaited."""
+        sync_node = cast("Callable[[CaseState], dict[str, Any]]", node)
+        result = sync_node(state)
         await _publish_safe(subject, result)
-        return result  # type: ignore[return-value]
+        return result
 
     return _async_wrapped if asyncio.iscoroutinefunction(node) else _sync_wrapped
 

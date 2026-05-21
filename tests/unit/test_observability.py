@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import uuid
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from opentelemetry import context as otel_context
 from opentelemetry import trace
 
 from wolfpack.config.settings import Settings
@@ -91,7 +92,7 @@ def test_traced_node_sync(provider: Any) -> None:
     def _node(state: CaseState) -> dict[str, Any]:
         return {"status": "ok"}
 
-    state = CaseState(case_id=str(uuid.uuid4()), seed=Seed(raw_payload={}))
+    state = CaseState(case_id=str(uuid.uuid4()), seed=Seed(type="alert", raw_payload={}))
     result = _node(state)
     assert result == {"status": "ok"}
 
@@ -104,7 +105,7 @@ async def test_traced_node_async(provider: Any) -> None:
     async def _node(state: CaseState) -> dict[str, Any]:
         return {"status": "async_ok"}
 
-    state = CaseState(case_id=str(uuid.uuid4()), seed=Seed(raw_payload={}))
+    state = CaseState(case_id=str(uuid.uuid4()), seed=Seed(type="alert", raw_payload={}))
     result = await _node(state)
     assert result == {"status": "async_ok"}
 
@@ -150,14 +151,17 @@ def test_inject_extract_roundtrip() -> None:
     headers = inject_nats_headers()
     assert "wolfpack.baggage" in headers
 
-    # Clear context (best-effort via new empty baggage)
-    set_case_baggage(case_id=None, branch_id=None, agent_run_id=None)
-
-    extract_nats_headers(headers)
-    ctx = get_case_baggage()
-    assert ctx.case_id == "c-123"
-    assert ctx.branch_id == "b-456"
-    assert ctx.agent_run_id == "a-789"
+    # extract returns a context carrying the baggage; activate it the way the
+    # NATS bus handler does before reading it back.
+    restored = extract_nats_headers(headers)
+    token = otel_context.attach(restored)
+    try:
+        ctx = get_case_baggage()
+        assert ctx.case_id == "c-123"
+        assert ctx.branch_id == "b-456"
+        assert ctx.agent_run_id == "a-789"
+    finally:
+        otel_context.detach(token)
 
 
 # --------------------------------------------------------------------------- #
@@ -171,9 +175,9 @@ async def test_traced_agent_run_creates_span(provider: Any) -> None:
     from wolfpack.observability.agents import traced_agent_run
 
     mock_agent = MagicMock()
-    mock_agent.run = MagicMock()
-    mock_agent.run.return_value = MagicMock()
-    mock_agent.run.return_value.output = "hello"
+    mock_result = MagicMock()
+    mock_result.output = "hello"
+    mock_agent.run = AsyncMock(return_value=mock_result)
     mock_agent.model.model_name = "test-model"
     mock_agent.model.provider = "test-provider"
 

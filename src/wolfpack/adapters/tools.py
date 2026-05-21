@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic_ai import RunContext
+from pydantic_ai import ModelRetry, RunContext
 
 from wolfpack.adapters.base import Event, TelemetrySource, TimeWindow
 from wolfpack.processing.pii_pipeline import PIIPipeline
@@ -50,15 +50,22 @@ def telemetry_tool_factory(adapter: TelemetrySource) -> Any:
         end_iso: str,
         top_k: int = 20,
     ) -> list[Event]:
+        # Model-supplied arguments are recoverable: raise ModelRetry so the
+        # agent can correct the call rather than aborting the whole run.
         if entity_type not in _ENTITY_TYPES:
-            raise ValueError(
+            raise ModelRetry(
                 f"Invalid entity_type: {entity_type!r}. Must be one of: {sorted(_ENTITY_TYPES)}"
             )
         if not entity_value:
-            raise ValueError("entity_value must be non-empty")
+            raise ModelRetry("entity_value must be non-empty")
         entity = Entity(type=entity_type, value=entity_value)
-        start = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
-        end = datetime.fromisoformat(end_iso.replace("Z", "+00:00"))
+        try:
+            start = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
+            end = datetime.fromisoformat(end_iso.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ModelRetry(
+                f"Invalid ISO timestamp ({exc}); use e.g. 2026-05-21T00:00:00Z"
+            ) from exc
         time_window = TimeWindow(start=start, end=end)
         events = await adapter.query(entity, time_window)
         events = events[:top_k]

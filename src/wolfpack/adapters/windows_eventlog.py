@@ -19,13 +19,13 @@ _LOGGER = logging.getLogger(__name__)
 try:
     from defusedxml import ElementTree as DET  # noqa: N814
 except ImportError:
-    DET = None  # type: ignore[misc]
+    DET = None
     _LOGGER.warning("defusedxml not installed; falling back to stdlib xml.etree (XXE risk)")
 
 if DET is not None:
     ET = DET
 else:
-    from xml.etree import ElementTree as ET  # type: ignore[assignment]
+    from xml.etree import ElementTree as ET
 
 
 class WindowsEventLogAdapter(TelemetrySource):
@@ -99,13 +99,13 @@ class WindowsEventLogAdapter(TelemetrySource):
     ) -> list[Event]:
         events: list[Event] = []
         try:
-            tree = ET.parse(str(path))  # type: ignore[attr-defined]  # noqa: S314
+            tree = ET.parse(str(path))  # noqa: S314
         except Exception as exc:
             _LOGGER.warning("XML fallback parse failed: %s", exc)
             return events
 
         for elem in tree.iter("Event"):
-            xml_str = ET.tostring(elem, encoding="unicode")  # type: ignore[attr-defined]
+            xml_str = ET.tostring(elem, encoding="unicode")
             event = self._parse_event_xml(xml_str, entity, time_window, filters)
             if event is not None:
                 events.append(event)
@@ -119,7 +119,7 @@ class WindowsEventLogAdapter(TelemetrySource):
         filters: dict[str, Any] | None,
     ) -> Event | None:
         try:
-            root = ET.fromstring(xml)  # type: ignore[attr-defined]  # noqa: S314
+            root = ET.fromstring(xml)  # noqa: S314
         except Exception as exc:
             _LOGGER.warning("Event XML parse failed: %s", exc)
             return None

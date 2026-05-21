@@ -156,7 +156,7 @@ Use `pg_dump` or a scheduled container:
 docker compose exec postgres pg_dump -U wolfpack -Fc wolfpack > wolfpack_$(date +%F).dump
 ```
 
-Critical tables: `cases`, `branches`, `evidence_ledger`, `breakglass_audit`, `crypto_shred_keys`, `pii_store`.
+Critical tables: `cases`, `branches`, `evidence_ledger`, `breakglass_audit`, `crypto_shred_keys`, `pii_salts`, `pii_mappings`.
 
 ### NATS JetStream
 

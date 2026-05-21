@@ -101,40 +101,41 @@ def _build_tools(
     # ------------------------------------------------------------------ #
     # RAG tools — wire deps.rag when available
     # ------------------------------------------------------------------ #
+    # Use deps-free closures that capture ``rag`` (which may be None). This
+    # keeps the tool signatures independent of the agent's CloserDeps shape —
+    # the module-level RAGDeps-typed tools expect a different deps object and
+    # would raise AttributeError when called with CloserDeps.
     rag = deps.rag if deps else None
-    if rag is not None:
 
-        async def _threat_intel(query: str, top_k: int = 5) -> Any:
-            pipeline = rag.threat_intel
-            if pipeline is None:
-                return RAGResult(source="threat_intel", answer="")
-            docs = await traced_retrieve("threat_intel", pipeline.retrieve)(query, top_k=top_k)
-            return RAGResult(
-                source="threat_intel",
-                documents=docs,
-                answer=_build_answer(docs),
-            )
+    async def _threat_intel(query: str, top_k: int = 5) -> Any:
+        pipeline = rag.threat_intel if rag is not None else None
+        if pipeline is None:
+            return RAGResult(source="threat_intel", answer="")
+        docs = await traced_retrieve("threat_intel", pipeline.retrieve)(query, top_k=top_k)
+        return RAGResult(
+            source="threat_intel",
+            documents=docs,
+            answer=_build_answer(docs),
+        )
 
-        _threat_intel.__name__ = "threat_intel_tool"
-        _threat_intel.__doc__ = threat_intel_tool.__doc__
-        tools.append(_threat_intel)
+    _threat_intel.__name__ = "threat_intel_tool"
+    _threat_intel.__doc__ = threat_intel_tool.__doc__
+    tools.append(_threat_intel)
 
-        async def _case_history(query: str, top_k: int = 5) -> Any:
-            pipeline = rag.case_history
-            if pipeline is None:
-                return RAGResult(source="case_history", answer="")
-            docs = await traced_retrieve("case_history", pipeline.retrieve)(query, top_k=top_k)
-            return RAGResult(
-                source="case_history",
-                documents=docs,
-                answer=_build_answer(docs),
-            )
+    async def _case_history(query: str, top_k: int = 5) -> Any:
+        pipeline = rag.case_history if rag is not None else None
+        if pipeline is None:
+            return RAGResult(source="case_history", answer="")
+        docs = await traced_retrieve("case_history", pipeline.retrieve)(query, top_k=top_k)
+        return RAGResult(
+            source="case_history",
+            documents=docs,
+            answer=_build_answer(docs),
+        )
 
-        _case_history.__name__ = "case_history_tool"
-        _case_history.__doc__ = case_history_tool.__doc__
-        tools.append(_case_history)
-    else:
-        tools.extend([threat_intel_tool, case_history_tool])
+    _case_history.__name__ = "case_history_tool"
+    _case_history.__doc__ = case_history_tool.__doc__
+    tools.append(_case_history)
 
     # ------------------------------------------------------------------ #
     # Adapter tools — wire deps.adapters when available
