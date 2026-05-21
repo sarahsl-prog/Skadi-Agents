@@ -5,6 +5,7 @@ Parses Cloudflare JSON logs and generic proxy logs (Squid, Apache mod_proxy).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from datetime import UTC, datetime
@@ -60,7 +61,7 @@ class ProxySource(TelemetrySource):
         if not path.exists():
             return events
 
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
         for line in text.splitlines():
             line = line.strip()
             if not line:

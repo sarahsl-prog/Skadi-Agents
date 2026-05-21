@@ -221,7 +221,7 @@ These bugs cause crashes or completely broken functionality.
 **Status:** No-op filtering; no circuit-breaker; unwired deps
 
 - [x] Lines 211-215: Collect and filter case-level hypotheses properly
-- [ ] Line 279: Add `max_re_checks` config; enforce in graph router
+- [x] Line 279: Add `max_re_checks` config; enforce in graph router (BranchBudgetConfig.max_re_checks + build_hunt_graph param)
 - [ ] Lines 33-44: Wire `FlankerDeps.rag` and `adapters` to tools
 - [x] Line 131-134: Don't shadow feature flag parameter
 - [x] Line 233: Fix branch_id fallback to reference actual branch
@@ -250,7 +250,7 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** LOW-8  
 **Status:** No validation on register
 
-- [ ] Lines 30,67-73: Validate `"check"` is callable in `register()`
+- [x] Lines 30,67-73: Validate `"check"` is callable in `register()` (raises TypeError; required-key check too)
 
 ---
 
@@ -388,9 +388,10 @@ These bugs cause crashes or completely broken functionality.
 
 ### 9.8 File Adapters — All `src/wolfpack/adapters/*.py`
 **Issues:** MED-50, LOW-40  
-**Status:** Partial (path validation done; asyncio.to_thread deferred)
+**Status:** Partial (path validation done; line-based adapters now use asyncio.to_thread)
 
-- [ ] All adapters: Use `asyncio.to_thread()` or `aiofiles` for file I/O
+- [x] Line-based adapters (syslog/cloudtrail/dns/firewall/proxy/zeek_suricata): `read_text` via `asyncio.to_thread`
+- [ ] `windows_eventlog._parse_xml_fallback`: sync `ET.parse` (would require making the helper async)
 - [x] Add path traversal validation on `log_path`/`evtx_path`
 
 ### 9.9 Adapter Tools — `src/wolfpack/adapters/tools.py`
@@ -450,7 +451,7 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-53, MED-65  
 **Status:** Docstring contradiction; re-entrant call
 
-- [ ] Line 46: Fix docstring or logic to never downgrade
+- [x] Line 46: Fix docstring or logic to never downgrade (clamped via `max(int(confidence), ...)`)
 - [ ] Lines 26-29: Clean up `_missing_` pattern
 
 ### 10.5 Persistence Pool — `src/wolfpack/schemas/persistence.py`
@@ -468,8 +469,8 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-21, MED-22  
 **Status:** Permanent failure on low confidence; missing evidence aggregation
 
-- [ ] Lines 137-142: Handle low-confidence with warning; set failure status
-- [ ] Lines 186-298: Aggregate branch evidence into case-level `evidence_refs`
+- [x] Lines 137-142: Handle low-confidence with warning; set failure status (`_set_failure_status` sets terminal `last_error`/`ingested_at`)
+- [x] Lines 186-298: Aggregate branch evidence into case-level `evidence_refs` (fixed loop-scope bug that only kept the last ref per branch)
 
 ### 11.2 Learning Summary — `src/wolfpack/learning/summary.py`
 **Issues:** MED-56, MED-57  
@@ -482,8 +483,8 @@ These bugs cause crashes or completely broken functionality.
 **Issues:** MED-58, MED-59  
 **Status:** KeyError risk; lenient matching
 
-- [ ] Line 29: Use `.get("name", self.path.stem)`
-- [ ] Lines 79-87: Use token overlap or embedding similarity
+- [x] Line 29: Use `.get("name", self.path.stem)`
+- [x] Lines 79-87: Use token overlap or embedding similarity (Jaccard token overlap implemented)
 
 ---
 
@@ -651,7 +652,7 @@ Add tests for:
 | 8 | Medium Observability | 4 | ✅ Done |
 | 9 | Medium RAG/Adapters | 11 | ✅ Done |
 | 10 | Medium Schemas | 5 | ⬜ Deferred (blast radius) |
-| 11 | Medium Learning/Eval | 4 | ⬜ Partial — MED-21/22/56/57/59 still open (see line items above) |
+| 11 | Medium Learning/Eval | 4 | ⬜ Partial — MED-56/57 (learning salt) still open; MED-21/22/58/59 done |
 | 12 | Medium Crypto/Config | 4 | ✅ Done |
 | 13 | Medium LLM/Observability | 3 | ⬜ Deferred |
 | 14 | Low Severity | 52 | ✅ Done |

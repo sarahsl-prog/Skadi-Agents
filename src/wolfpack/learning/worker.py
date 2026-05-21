@@ -292,7 +292,9 @@ class LearningQueueWorker:
                         content = json.loads(content)
                     ref = EvidenceRef.model_validate(content)
                     branch.evidence_refs.append(ref)
-                case.evidence_refs.append(ref)
+                    # Aggregate every branch evidence ref up to the case level
+                    # so format_case_summary sees the full set.
+                    case.evidence_refs.append(ref)
                 case.branches.append(branch)
 
             return case

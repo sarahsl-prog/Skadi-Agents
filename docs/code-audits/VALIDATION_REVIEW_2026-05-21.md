@@ -27,7 +27,9 @@ fixed on this branch:
 
 **Quality gates now (this branch):** `pytest tests/unit tests/security` → 329 passed, 8 skipped; `mypy src` → clean; `ruff check src tests` → clean. Integration tests remain Docker-gated and unexecuted here.
 
-**Still open (P3 / coverage):** see §3 P3 and §4 — Flanker `max_re_checks`, learning-worker terminal status (MED-21/22), learning salt (MED-56/57), eval matching (MED-59), schema polish, and untested modules.
+**P3 progress (this branch):** Flanker `max_re_checks` now configurable (`BranchBudgetConfig.max_re_checks` + `build_hunt_graph` param); learning-worker case-level `evidence_refs` aggregation bug fixed (was only keeping the last ref per branch, with a `NameError` risk on empty branches); line-based file adapters (cloudtrail/dns/firewall/proxy/zeek_suricata) now read via `asyncio.to_thread`. Verified already-done from prior remediation: MED-21 (terminal failure status), MED-53 (confidence clamp), MED-58/59 (eval key guard + Jaccard matching), LOW-3 (`content_hash` rename), LOW-8 (policy `register` validation).
+
+**Still open (P3 / coverage):** learning salt strategy (MED-56/57) and KEK re-wrap (MED-38) — both need a design decision; `windows_eventlog` sync XML parse; schema polish (MED-61/62, entity/seed ids); LLM `hosted` flag (LOW-51); and the untested-module backfill in §4.
 
 ---
 

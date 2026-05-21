@@ -5,6 +5,7 @@ Parses iptables, pfSense, and Palo Alto log formats from files.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -45,7 +46,7 @@ class FirewallAdapter(TelemetrySource):
         if not path.exists():
             return events
 
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
         for line in text.splitlines():
             line = line.strip()
             if not line:

@@ -38,17 +38,21 @@ def _route_after_tracker(state: CaseState) -> str:
     return "closer"
 
 
-def _route_after_flanker(state: CaseState) -> str:
-    """Route Flanker output based on significance and re-check count.
+def _build_flanker_router(max_re_checks: int) -> Callable[[CaseState], str]:
+    """Build the post-Flanker router with a configurable re-check budget.
 
     If Flanker produced significant new findings and we have not exhausted
-    the re-check budget, loop back to Tracker for reassessment.
-    Otherwise proceed to Closer.
+    the re-check budget (``max_re_checks``), loop back to Tracker for
+    reassessment.  Otherwise proceed to Closer.  This is the circuit-breaker
+    that bounds the Tracker<->Flanker loop.
     """
-    max_recheck = 2
-    if state.significant_findings and state.re_check_count < max_recheck:
-        return "tracker"
-    return "closer"
+
+    def _route(state: CaseState) -> str:
+        if state.significant_findings and state.re_check_count < max_re_checks:
+            return "tracker"
+        return "closer"
+
+    return _route
 
 
 def _route_after_review(state: CaseState) -> str:
@@ -136,6 +140,7 @@ def build_hunt_graph(
     review: NodeFn | None = None,
     scribe: NodeFn | None = None,
     nats_client: Any | None = None,
+    max_re_checks: int = 2,
 ) -> Any:
     """Compile the hunt graph.
 
@@ -236,7 +241,7 @@ def build_hunt_graph(
     builder.add_edge("flanker", "scribe_after_flanker")
     builder.add_conditional_edges(
         "scribe_after_flanker",
-        _route_after_flanker,
+        _build_flanker_router(max_re_checks),
         {
             "tracker": "tracker",
             "closer": "closer",
