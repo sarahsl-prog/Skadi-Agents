@@ -16,16 +16,7 @@ from wolfpack.schemas.entity import Entity
 
 _LOGGER = logging.getLogger(__name__)
 
-try:
-    from defusedxml import ElementTree as DET  # noqa: N814
-except ImportError:
-    DET = None
-    _LOGGER.warning("defusedxml not installed; falling back to stdlib xml.etree (XXE risk)")
-
-if DET is not None:
-    ET = DET
-else:
-    from xml.etree import ElementTree as ET
+from defusedxml import ElementTree as ET  # noqa: N817
 
 
 class WindowsEventLogAdapter(TelemetrySource):
@@ -56,11 +47,16 @@ class WindowsEventLogAdapter(TelemetrySource):
 
         # Try python-evtx first, then fallback to simple XML parsing
         try:
-            events = self._parse_evtx(path, entity, time_window, filters)
-        except Exception as exc:
-            _LOGGER.warning("EVTX parse failed, falling back to XML: %s", exc)
-            # Fallback: try to read as raw XML if the file is XML
+            import Evtx.Evtx as Evtx  # noqa: F401
+        except ImportError:
+            _LOGGER.debug("python-evtx not installed; using XML fallback")
             events = self._parse_xml_fallback(path, entity, time_window, filters)
+        else:
+            try:
+                events = self._parse_evtx(path, entity, time_window, filters)
+            except Exception as exc:
+                _LOGGER.warning("EVTX parse failed, falling back to XML: %s", exc)
+                events = self._parse_xml_fallback(path, entity, time_window, filters)
 
         return events
 
@@ -99,12 +95,12 @@ class WindowsEventLogAdapter(TelemetrySource):
     ) -> list[Event]:
         events: list[Event] = []
         try:
-            tree = ET.parse(str(path))  # noqa: S314
+            tree = ET.parse(str(path))
         except Exception as exc:
             _LOGGER.warning("XML fallback parse failed: %s", exc)
             return events
 
-        for elem in tree.iter("Event"):
+        for elem in tree.iter("{http://schemas.microsoft.com/win/2004/08/events/event}Event"):
             xml_str = ET.tostring(elem, encoding="unicode")
             event = self._parse_event_xml(xml_str, entity, time_window, filters)
             if event is not None:
@@ -119,7 +115,7 @@ class WindowsEventLogAdapter(TelemetrySource):
         filters: dict[str, Any] | None,
     ) -> Event | None:
         try:
-            root = ET.fromstring(xml)  # noqa: S314
+            root = ET.fromstring(xml)
         except Exception as exc:
             _LOGGER.warning("Event XML parse failed: %s", exc)
             return None

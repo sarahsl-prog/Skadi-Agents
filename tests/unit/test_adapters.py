@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -16,6 +17,7 @@ from wolfpack.adapters.okta import OktaAdapter
 from wolfpack.adapters.proxy import ProxySource
 from wolfpack.adapters.syslog import SyslogAdapter
 from wolfpack.adapters.tools import AdapterDeps, build_adapter_tools, telemetry_tool_factory
+from wolfpack.adapters.windows_eventlog import WindowsEventLogAdapter
 from wolfpack.adapters.zeek_suricata import ZeekSuricataSource
 from wolfpack.schemas.entity import Entity
 
@@ -465,3 +467,50 @@ class TestCloudTrailAdapter:
     async def test_health_check(self, cloudtrail_log_file: str) -> None:
         adapter = CloudTrailSource(log_path=cloudtrail_log_file)
         assert await adapter.health_check() is True
+
+
+class TestWindowsEventLogAdapter:
+    """Windows Event Log adapter must use secure XML parsing only."""
+
+    def test_uses_defusedxml_not_stdlib(self) -> None:
+        """Importing the module should bind ET to defusedxml, never stdlib."""
+        from wolfpack.adapters import windows_eventlog as wev_mod
+
+        assert wev_mod.ET.__name__.startswith("defusedxml")
+        assert "defusedxml" in wev_mod.ET.parse.__module__
+
+    @pytest.mark.asyncio
+    async def test_xml_fallback_parses_event(self, tmp_path: Path) -> None:
+        """XML fallback path works and filters by entity/time."""
+        fixed_ts = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        event_xml = f"""<?xml version="1.0"?>
+        <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+          <System>
+            <TimeCreated SystemTime="{fixed_ts}"/>
+            <EventID>4624</EventID>
+            <Computer>WORKSTATION01</Computer>
+            <Level>4</Level>
+            <Channel>Security</Channel>
+          </System>
+          <EventData>
+            <Data Name="IpAddress">10.0.0.1</Data>
+          </EventData>
+        </Event>
+        """
+        path = tmp_path / "test.evtx"
+        path.write_text(event_xml, encoding="utf-8")
+
+        # Use a window that definitely contains the event timestamp.
+        now = datetime.now(UTC)
+        time_window = TimeWindow(start=now - timedelta(hours=1), end=now + timedelta(hours=1))
+
+        adapter = WindowsEventLogAdapter(evtx_path=str(path))
+        entity = Entity(type="ip", value="10.0.0.1")
+        events = await adapter.query(entity, time_window)
+
+        assert len(events) == 1
+        assert events[0].source == "windows_eventlog"
+        assert events[0].raw_payload["event_id"] == "4624"
+        assert events[0].raw_payload["computer"] == "WORKSTATION01"
+        assert events[0].raw_payload["IpAddress"] == "10.0.0.1"
+        assert events[0].severity == "low"
