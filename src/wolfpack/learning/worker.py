@@ -99,14 +99,14 @@ class LearningQueueWorker:
     # ------------------------------------------------------------------ #
 
     async def _fetch_entries(self) -> list[asyncpg.Record | dict[str, Any]]:
-        """Return approved entries where ingested_at IS NULL."""
+        """Return approved entries that are still pending and under the retry limit."""
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 """
                 SELECT id, case_id, retry_count
                 FROM wolfpack.learning_queue
                 WHERE approved_by IS NOT NULL
-                  AND ingested_at IS NULL
+                  AND (status IS NULL OR status = 'pending')
                   AND (retry_count IS NULL OR retry_count < $1)
                 ORDER BY approved_at ASC
                 LIMIT $2
@@ -138,7 +138,7 @@ class LearningQueueWorker:
             ),
         )
 
-        # 3. Quality gate: need plausible or above (soft fail → skip)
+        # 3. Quality gate: need plausible or above (soft fail → permanent fail, no retry)
         min_confidence = Confidence.PLAUSIBLE
         if verdict.confidence < min_confidence:
             _LOGGER.warning(
@@ -171,6 +171,7 @@ class LearningQueueWorker:
                 """
                 UPDATE wolfpack.learning_queue
                 SET ingested_at = NOW(),
+                    status = 'ingested',
                     retry_count = COALESCE(retry_count, 0)
                 WHERE id = $1
                 """,
@@ -184,7 +185,8 @@ class LearningQueueWorker:
                 """
                 UPDATE wolfpack.learning_queue
                 SET last_error = $2,
-                    ingested_at = NOW()
+                    status = 'failed',
+                    retry_count = COALESCE(retry_count, 0)
                 WHERE id = $1
                 """,
                 entry_id,
@@ -192,18 +194,21 @@ class LearningQueueWorker:
             )
 
     async def _handle_failure(self, entry_id: str, exc: Exception) -> None:
-        """Increment retry count for the entry."""
+        """Increment retry count and escalate to permanent failure at the limit."""
         async with self._pool.acquire() as conn:
-            await conn.execute(
+            row = await conn.fetchrow(
                 """
                 UPDATE wolfpack.learning_queue
                 SET retry_count = COALESCE(retry_count, 0) + 1,
                     last_error = $2
                 WHERE id = $1
+                RETURNING retry_count
                 """,
                 entry_id,
                 str(exc)[:500],
             )
+        if row is not None and row["retry_count"] >= self.retry_limit:
+            await self._set_failure_status(entry_id, f"retry_limit_exceeded: {exc}")
 
     # ------------------------------------------------------------------ #
     # Full case state reconstruction

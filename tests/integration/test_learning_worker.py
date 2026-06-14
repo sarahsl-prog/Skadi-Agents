@@ -37,7 +37,8 @@ async def pg_pool() -> Any:
                     approved_at TIMESTAMPTZ,
                     ingested_at TIMESTAMPTZ,
                     retry_count INTEGER DEFAULT 0,
-                    last_error TEXT
+                    last_error TEXT,
+                    status VARCHAR DEFAULT 'pending'
                 )
             """)
             await conn.execute("""
@@ -71,6 +72,14 @@ async def pg_pool() -> Any:
                     description TEXT NOT NULL,
                     confidence INTEGER NOT NULL,
                     status VARCHAR NOT NULL DEFAULT 'open',
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS wolfpack.pii_salts (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    case_id UUID NOT NULL UNIQUE REFERENCES wolfpack.cases(id) ON DELETE CASCADE,
+                    salt BYTEA NOT NULL,
                     created_at TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
@@ -150,14 +159,18 @@ class TestLearningQueueWorker:
         # Run worker
         await worker.run_tick()
 
-        # Verify ingested_at is set
+        # Verify ingested_at is set and status is ingested
         row = await pg_pool.fetchrow(
-            "SELECT ingested_at, retry_count FROM wolfpack.learning_queue WHERE id = $1",
+            (
+                "SELECT ingested_at, retry_count, status, last_error "
+                "FROM wolfpack.learning_queue WHERE id = $1"
+            ),
             entry_id,
         )
         assert row is not None
         assert row["ingested_at"] is not None
         assert row["retry_count"] == 0
+        assert row["status"] == "ingested"
 
         # Verify case-history index contains the summary
         results = await pipeline.retrieve("10.0.0.1", top_k=5)
@@ -182,10 +195,11 @@ class TestLearningQueueWorker:
         )
         await worker.run_tick()
         row = await pg_pool.fetchrow(
-            "SELECT ingested_at FROM wolfpack.learning_queue WHERE id = $1", entry_id
+            "SELECT ingested_at, status FROM wolfpack.learning_queue WHERE id = $1", entry_id
         )
         assert row is not None
         assert row["ingested_at"] is None
+        assert row["status"] in (None, "pending")
 
     @pytest.mark.asyncio
     async def test_retry_and_fail(self, pg_pool: asyncpg.Pool) -> None:
@@ -206,13 +220,21 @@ class TestLearningQueueWorker:
             """,
             case_id,
         )
-        await worker.run_tick()
+        # Run the worker retry_limit times; the last run should mark the entry failed.
+        for _ in range(2):
+            await worker.run_tick()
         row = await pg_pool.fetchrow(
-            "SELECT retry_count, last_error FROM wolfpack.learning_queue WHERE id = $1", entry_id
+            (
+                "SELECT retry_count, last_error, status, ingested_at "
+                "FROM wolfpack.learning_queue WHERE id = $1"
+            ),
+            entry_id,
         )
         assert row is not None
-        assert row["retry_count"] == 1
+        assert row["retry_count"] == 2
         assert row["last_error"] is not None
+        assert row["status"] == "failed"
+        assert row["ingested_at"] is None
 
     @pytest.mark.asyncio
     async def test_batch_does_not_block_on_failure(self, pg_pool: asyncpg.Pool) -> None:
